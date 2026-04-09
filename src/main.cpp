@@ -1,5 +1,10 @@
+#include <cstdio>
+#include <print>
+
 #include "control.h"
 #include "raylib.h"
+
+#define GLSL_VERSION 330
 
 int main() {
   GamepadControlProxy controller_info;
@@ -16,6 +21,15 @@ int main() {
   camera.fovy = 45.0f;          // Camera field-of-view Y
   camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
 
+  Shader shader = LoadShader(
+      TextFormat("resources/shaders/glsl%i/lighting_instancing.vs",
+                 GLSL_VERSION),
+      TextFormat("resources/shaders/glsl%i/lighting.fs", GLSL_VERSION));
+
+  Model model = LoadModel("../release/rebuilt.gltf");
+  Texture2D texture = LoadTexture("../release/rebuilt.gltf");
+  model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+
   DisableCursor();
 
   SetTargetFPS(60);
@@ -30,6 +44,8 @@ int main() {
     ClearBackground(RAYWHITE);
 
     BeginMode3D(camera);
+
+    DrawModel(model, {}, 1.0f, WHITE);
     DrawGrid(10, 1.0f);
 
     EndMode3D();

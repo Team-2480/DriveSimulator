@@ -10,7 +10,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(raylib)
 
-target_link_libraries(bagelsim PUBLIC raylib)
+target_link_libraries(bagelsim PUBLIC raylib glfw)
 
 add_custom_command(TARGET bagelsim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy

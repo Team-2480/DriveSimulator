@@ -1,7 +1,10 @@
 #pragma once
 
+#include <GLFW/glfw3.h>
+
 #include <cstddef>
 #include <map>
+#include <print>
 
 #include "raylib.h"
 class GamepadControlProxy {
@@ -10,58 +13,42 @@ class GamepadControlProxy {
   ~GamepadControlProxy() {}
 
   void step() {
-    gamepad_left_stick_x =
-        GetGamepadAxisMovement(GAMEPAD_ID, GAMEPAD_AXIS_LEFT_X);
-    gamepad_left_stick_y =
-        GetGamepadAxisMovement(GAMEPAD_ID, GAMEPAD_AXIS_LEFT_Y);
-    gamepad_right_stick_x =
-        GetGamepadAxisMovement(GAMEPAD_ID, GAMEPAD_AXIS_RIGHT_X);
-    gamepad_right_stick_y =
-        GetGamepadAxisMovement(GAMEPAD_ID, GAMEPAD_AXIS_RIGHT_Y);
-    gamepad_left_trigger =
-        GetGamepadAxisMovement(GAMEPAD_ID, GAMEPAD_AXIS_LEFT_TRIGGER);
-    gamepad_right_trigger =
-        GetGamepadAxisMovement(GAMEPAD_ID, GAMEPAD_AXIS_RIGHT_TRIGGER);
+    has_gamepad = IsGamepadAvailable(GAMEPAD_ID);
+    if (IsGamepadAvailable(GAMEPAD_ID)) {
+      int count;
+      const float* axes = glfwGetJoystickAxes(GAMEPAD_ID, &count);
 
-    for (size_t i = 0; i < 20; i++) {
-      gamepad_inputs[i] = IsGamepadButtonDown(GAMEPAD_ID, i);
+      for (int i = 0; i < count; i++) {
+        joystick_axis[i] = axes[i];
+      }
+
+      for (size_t i = 0; i < 20; i++) {
+        gamepad_inputs[i] = IsGamepadButtonDown(GAMEPAD_ID, i);
+      }
     }
 
-    joystick_left_stick_x =
-        GetGamepadAxisMovement(JOYSTICK_ID, GAMEPAD_AXIS_LEFT_X);
-    joystick_left_stick_y =
-        GetGamepadAxisMovement(JOYSTICK_ID, GAMEPAD_AXIS_LEFT_Y);
-    joystick_right_stick_x =
-        GetGamepadAxisMovement(JOYSTICK_ID, GAMEPAD_AXIS_RIGHT_X);
-    joystick_right_stick_y =
-        GetGamepadAxisMovement(JOYSTICK_ID, GAMEPAD_AXIS_RIGHT_Y);
-    joystick_left_trigger =
-        GetGamepadAxisMovement(JOYSTICK_ID, GAMEPAD_AXIS_LEFT_TRIGGER);
-    joystick_right_trigger =
-        GetGamepadAxisMovement(JOYSTICK_ID, GAMEPAD_AXIS_RIGHT_TRIGGER);
+    has_joystick = IsGamepadAvailable(JOYSTICK_ID);
+    if (IsGamepadAvailable(JOYSTICK_ID)) {
+      int count;
+      const float* axes = glfwGetJoystickAxes(JOYSTICK_ID, &count);
 
-    for (size_t i = 0; i < 20; i++) {
-      joystick_inputs[i] = IsGamepadButtonDown(JOYSTICK_ID, i);
+      for (int i = 0; i < count; i++) {
+        joystick_axis[i] = axes[i];
+      }
+
+      for (size_t i = 0; i < 20; i++) {
+        joystick_inputs[i] = IsGamepadButtonDown(JOYSTICK_ID, i);
+      }
     }
   }
 
+  bool has_gamepad = false;
   std::map<size_t, bool> gamepad_inputs;
+  std::map<size_t, float> gamepad_axis;
 
-  float gamepad_left_stick_x = 0;
-  float gamepad_left_stick_y = 0;
-  float gamepad_right_stick_x = 0;
-  float gamepad_right_stick_y = 0;
-  float gamepad_left_trigger = 0;
-  float gamepad_right_trigger = 0;
-
+  bool has_joystick = false;
   std::map<size_t, bool> joystick_inputs;
-
-  float joystick_left_stick_x = 0;
-  float joystick_left_stick_y = 0;
-  float joystick_right_stick_x = 0;
-  float joystick_right_stick_y = 0;
-  float joystick_left_trigger = 0;
-  float joystick_right_trigger = 0;
+  std::map<size_t, float> joystick_axis;
 
  private:
   static constexpr int GAMEPAD_ID = 1;
