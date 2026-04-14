@@ -22,8 +22,9 @@ class GamepadControlProxy {
         joystick_axis[i] = axes[i];
       }
 
-      for (size_t i = 0; i < 20; i++) {
-        gamepad_inputs[i] = IsGamepadButtonDown(GAMEPAD_ID, i);
+      auto buttons = glfwGetJoystickButtons(GAMEPAD_ID, &count);
+      for (size_t i = 0; i < count; i++) {
+        gamepad_inputs[i] = buttons[i] == GLFW_PRESS;
       }
     }
 
@@ -36,8 +37,9 @@ class GamepadControlProxy {
         joystick_axis[i] = axes[i];
       }
 
-      for (size_t i = 0; i < 20; i++) {
-        joystick_inputs[i] = IsGamepadButtonDown(JOYSTICK_ID, i);
+      auto buttons = glfwGetJoystickButtons(JOYSTICK_ID, &count);
+      for (size_t i = 0; i < count; i++) {
+        joystick_inputs[i] = buttons[i] == GLFW_PRESS;
       }
     }
   }
