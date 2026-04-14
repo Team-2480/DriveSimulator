@@ -19,12 +19,12 @@ int main() {
   InitWindow(screenWidth, screenHeight, "EvilAwesomeBagleSimulator");
 
   Camera3D camera = {0};
-  camera.position = (Vector3){10.0f, 10.0f, 10.0f};  // Camera position
-  camera.target = (Vector3){0.0f, 0.0f, 0.0f};       // Camera looking at point
-  camera.up = (Vector3){0.0f, 1.0f,
-                        0.0f};  // Camera up vector (rotation towards target)
-  camera.fovy = 45.0f;          // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
+  camera.position = (Vector3){10.0f, 10.0f, 10.0f}; // Camera position
+  camera.target = (Vector3){0.0f, 0.0f, 0.0f};      // Camera looking at point
+  camera.up =
+      (Vector3){0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
+  camera.fovy = 45.0f;             // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
 
   Shader shader =
       LoadShader(TextFormat("../release/lighting.vs", GLSL_VERSION),
@@ -79,6 +79,10 @@ int main() {
     DrawModel(model, {}, 1.0f, WHITE);
 
     robot_rot -= controller_info.joystick_axis[2];
+    
+    robot_pos.x += controller_info.joystick_axis[0];
+    robot_pos.z += controller_info.joystick_axis[1];
+
     /*
    robot_pos = Vector3Add(robot_pos, Vector3Scale({sin(robot_rot * DEG2RAD), 0,
                                                    cos(robot_rot * DEG2RAD)},
