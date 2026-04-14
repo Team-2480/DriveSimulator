@@ -10,6 +10,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(raylib)
 
+FetchContent_Declare(
+    jolt 
+    URL https://github.com/jrouwe/JoltPhysics/archive/refs/tags/v5.5.0.tar.gz
+)
+FetchContent_MakeAvailable(jolt)
+
 target_link_libraries(bagelsim PUBLIC raylib glfw)
 
 add_custom_command(TARGET bagelsim POST_BUILD
