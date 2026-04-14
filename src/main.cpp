@@ -1,8 +1,11 @@
+#include <cmath>
 #include <cstdio>
 #include <print>
 
 #include "control.h"
 #include "raylib.h"
+#include "rlgl.h"
+#include "raymath.h"
 
 #define GLSL_VERSION 330
 
@@ -30,14 +33,15 @@ int main() {
   Texture2D texture = LoadTexture("../release/rebuilt.gltf");
   model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
 
+  float robot_rot = 0;
+  Vector3 robot_pos = {0,0,0};
+
   DisableCursor();
 
   SetTargetFPS(60);
 
   while (!WindowShouldClose()) {
     controller_info.step();
-
-    // printf("%f\n", controller_info.gamepad_right_trigger);
 
     UpdateCamera(&camera, CAMERA_FREE);
 
@@ -48,14 +52,17 @@ int main() {
     BeginMode3D(camera);
 
     DrawModel(model, {}, 1.0f, WHITE);
-    DrawGrid(10, 1.0f);
 
-    DrawCube({0.0f, 1.0f, 0.0f}, 2.0f, 2.0f, 2.0f, GREEN);
+    robot_rot -= controller_info.joystick_axis[2];
+    robot_pos= Vector3Add(robot_pos, Vector3Scale({sin(robot_rot * DEG2RAD), 0, cos(robot_rot * DEG2RAD)}, 0.1));
+    
+    rlPushMatrix();
+    rlRotatef(robot_rot, 0.0f, 1.0f, 0.0f);
+    DrawCubeV(robot_pos, {0.794f, 0.2f, 0.940f}, GREEN);
+    rlPopMatrix();
+
 
     EndMode3D();
-
-    // DrawText("Congrats! You created your first window!", 190, 200, 20,
-    //          LIGHTGRAY);
 
     EndDrawing();
   }
