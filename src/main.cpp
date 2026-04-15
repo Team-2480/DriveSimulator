@@ -42,7 +42,7 @@ int main() {
   const int screenWidth = 800;
   const int screenHeight = 450;
 
-  InitWindow(screenWidth, screenHeight, "EvilAwesomeBagleSimulator");
+  InitWindow(screenWidth, screenHeight, "EvilAwesomeBagelSimulator");
 
   Camera3D camera = {0};
   camera.position = (Vector3){10.0f, 10.0f, 10.0f};  // Camera position
@@ -127,10 +127,38 @@ int main() {
     else
       DrawModel(jolt.convex_model, {}, 1.0f, WHITE);
 
-    robot_rot -= controller_info.joystick_axis[2];
+    if (!(controller_info.joystick_axis[0] >= -0.1 &&
+          controller_info.joystick_axis[0] <= 0.1)) {
 
-    robot_pos.x += controller_info.joystick_axis[0];
-    robot_pos.z += controller_info.joystick_axis[1];
+      robot_pos.x += controller_info.joystick_axis[0] / 2;
+    }
+
+    if (!(controller_info.joystick_axis[1] >= -0.1 &&
+          controller_info.joystick_axis[1] <= 0.1)) {
+
+      robot_pos.z += controller_info.joystick_axis[1] / 2;
+    }
+
+    if (!(controller_info.joystick_axis[2] >= -0.2 &&
+          controller_info.joystick_axis[2] <= 0.2)) {
+
+      robot_rot -= controller_info.joystick_axis[2] * 6;
+    }
+
+    if (controller_info.joystick_inputs[4]) {
+      robot_pos.y += 0.1;
+      // printf("fly\n");
+    }
+    if (controller_info.joystick_inputs[5]) {
+      robot_pos.y -= 0.1;
+      // printf("no fly\n");
+    }
+
+    /*
+   robot_pos = Vector3Add(robot_pos, Vector3Scale({sin(robot_rot * DEG2RAD), 0,
+                                                   cos(robot_rot * DEG2RAD)},
+                                                  0.1));
+                                                  */
 
     rlPushMatrix();
     rlTranslatef(robot_pos.x, robot_pos.y, robot_pos.z);
