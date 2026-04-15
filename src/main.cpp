@@ -1,8 +1,32 @@
-#include <cmath>
-#include <cstdio>
-#include <print>
 
+#include <Jolt/Jolt.h>
+
+// Jolt includes
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Math/Real.h>
+#include <Jolt/Physics/Body/BodyActivationListener.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/PhysicsSettings.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/RegisterTypes.h>
+
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <iostream>
+#include <print>
+#include <ranges>
+
+#include "Jolt/Geometry/Triangle.h"
+#include "Jolt/Math/Float3.h"
+#include "Jolt/Physics/Collision/Shape/MeshShape.h"
+#include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "control.h"
+#include "jolt.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -10,6 +34,8 @@
 #include "rlights.h"
 
 #define GLSL_VERSION 330
+
+using namespace JPH::literals;
 
 int main() {
   GamepadControlProxy controller_info;
@@ -51,6 +77,11 @@ int main() {
     model.materials[i].shader = shader;
   }
 
+  Model sphere_model = LoadModelFromMesh(GenMeshSphere(0.14986f, 20, 20));
+  for (size_t i = 0; i < sphere_model.materialCount; i++) {
+    sphere_model.materials[i].shader = shader;
+  }
+
   float robot_rot = 0;
   Vector3 robot_pos = {0, 0.1, 0};
 
@@ -58,8 +89,19 @@ int main() {
 
   SetTargetFPS(60);
 
+  JoltWrapper::init();
+  JoltWrapper jolt(shader);
+
+  /// sphere stuff
+
+  jolt.physics_system.OptimizeBroadPhase();
+
+  bool debug = false;
   while (!WindowShouldClose()) {
+    jolt.make_ball();
+
     controller_info.step();
+    jolt.update();
 
     UpdateCamera(&camera, CAMERA_FREE);
 
@@ -76,7 +118,14 @@ int main() {
 
     BeginShaderMode(shader);
 
-    DrawModel(model, {}, 1.0f, WHITE);
+    if (IsKeyPressed(KEY_P)) {
+      debug = !debug;
+    }
+
+    if (!debug)
+      DrawModel(model, {}, 1.0f, WHITE);
+    else
+      DrawModel(jolt.convex_model, {}, 1.0f, WHITE);
 
     robot_rot -= controller_info.joystick_axis[2];
 
@@ -88,6 +137,15 @@ int main() {
     rlRotatef(robot_rot, 0.0f, 1.0f, 0.0f);
     DrawCubeV({0.0, 0.0, 0.0}, {0.794f, 0.2f, 0.940f}, GREEN);
     rlPopMatrix();
+
+    auto balls = jolt.get_ball_positions();
+    for (auto ball : balls) {
+      DrawModel(sphere_model, ball, 1.0f, YELLOW);
+    }
+    /*
+    DrawSphere(
+      {position.GetX(), position.GetY(), position.GetZ()}, 0.14986f, GREEN);
+      */
 
     EndShaderMode();
     EndMode3D();
