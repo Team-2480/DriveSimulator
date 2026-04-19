@@ -188,9 +188,7 @@ int main() {
       camera = camera_perspectives[camera_index];
     } else if (camera_index == 10) {
       auto forward = Vector3RotateByAxisAngle(
-          Vector3RotateByAxisAngle(
-              {0, 0, -1}, {axis.GetX(), axis.GetY(), axis.GetZ()}, angle),
-          {0, 1, 0}, default_rot);
+          {0, 0, -1}, {axis.GetX(), axis.GetY(), axis.GetZ()}, angle);
 
       auto pos = Vector3{player_pos.GetX(), player_pos.GetY() + 0.3f,
                          player_pos.GetZ()};
@@ -279,8 +277,13 @@ int main() {
 
     rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
 
-    DrawCubeV({0.0, 0.2, 0.0}, Constants::ROBOT_SIZE,
-              global_local ? GREEN : RED);
+    DrawCubeV({0.0, 0.2 + Constants::ROBOT_SIZE.y / 2, 0.0},
+              Constants::ROBOT_SIZE, global_local ? GREEN : RED);
+
+    DrawCubeV(
+        Vector3{0, Constants::ROBOT_SIZE.y / 2, -Constants::ROBOT_SIZE.z / 2} +
+            Vector3{0.0, 0.2 + Constants::ROBOT_SIZE.y / 2, 0.0},
+        {0.1, 0.1, 0.1}, global_local ? RED : GREEN);
     rlPopMatrix();
 
     auto modules = calculate_swerve_states(
@@ -291,7 +294,7 @@ int main() {
     for (int i = 0; i < 4; i++) {
       rlPushMatrix();
 
-      rlTranslatef(player_pos.GetX(), 0, player_pos.GetZ());
+      rlTranslatef(player_pos.GetX(), player_pos.GetY(), player_pos.GetZ());
       rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
       rlTranslatef(modules_positions[i].x, 0.1, modules_positions[i].y);
       rlRotatef(modules[i].rot * RAD2DEG, 0, 1, 0);
