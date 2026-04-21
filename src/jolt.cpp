@@ -88,11 +88,21 @@ void JoltWrapper::update() {
   }
 }
 void JoltWrapper::make_ball() {
+  JPH::EOverrideMassProperties::MassAndInertiaProvided;
   JPH::BodyCreationSettings sphere_settings(
       new JPH::SphereShape(0.15f),
       JPH::RVec3((float)(rand() % 10000) / 10000 * 8 - 4.0_r, 2.0_r,
                  (float)(rand() % 10000) / 10000 * 4 - 2.0_r),
       JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, Layers::MOVING);
+
+  JPH::MassProperties msp;
+  msp.mMass = .22;
+  msp.ScaleToMass(1);
+
+  sphere_settings.mMassPropertiesOverride = msp;
+  sphere_settings.mOverrideMassProperties =
+      JPH::EOverrideMassProperties::MassAndInertiaProvided;
+
   JPH::BodyID sphere_id = get_interface().CreateAndAddBody(
       sphere_settings, JPH::EActivation::Activate);
   get_interface().SetLinearAndAngularVelocity(

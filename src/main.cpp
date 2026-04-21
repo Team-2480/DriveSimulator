@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <print>
 
 #include "config.h"
 #include "control.h"
@@ -71,6 +72,7 @@ int main() {
   const int screenHeight = 450;
 
   InitWindow(screenWidth, screenHeight, "EvilAwesomeBagelSimulator");
+  SetConfigFlags(FLAG_FULLSCREEN_MODE | FLAG_WINDOW_RESIZABLE);
 
   Camera3D camera;
   camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
@@ -130,11 +132,14 @@ int main() {
       Layers::MOVING);
 
   JPH::MassProperties msp;
-  msp.ScaleToMass(100.0f);
+  msp.SetMassAndInertiaOfSolidBox(
+      {Constants::ROBOT_SIZE.x, Constants::ROBOT_SIZE.y,
+       Constants::ROBOT_SIZE.z},
+      4);
 
   player_settings.mMassPropertiesOverride = msp;
   player_settings.mOverrideMassProperties =
-      JPH::EOverrideMassProperties::CalculateInertia;
+      JPH::EOverrideMassProperties::MassAndInertiaProvided;
 
   JPH::BodyID player_id = jolt.get_interface().CreateAndAddBody(
       player_settings, JPH::EActivation::Activate);
@@ -269,40 +274,53 @@ int main() {
         {corrected_player_velocity.x - player_real_velocity.GetX() * 0.1f, 0,
          corrected_player_velocity.z - player_real_velocity.GetZ() * 0.1f},
         JPH::Vec3{-player_real_ang_rot.GetX() * 0.01f,
-                  player_rot_velocity - player_real_ang_rot.GetY() * 0.01f,
+                  player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
                   -player_real_ang_rot.GetZ() * 0.01f});
 
-    rlPushMatrix();
-    rlTranslatef(player_pos.GetX(), player_pos.GetY(), player_pos.GetZ());
-
-    rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
-
-    DrawCubeV({0.0, 0.2 + Constants::ROBOT_SIZE.y / 2, 0.0},
-              Constants::ROBOT_SIZE, global_local ? GREEN : RED);
-
-    DrawCubeV(
-        Vector3{0, Constants::ROBOT_SIZE.y / 2, -Constants::ROBOT_SIZE.z / 2} +
-            Vector3{0.0, 0.2 + Constants::ROBOT_SIZE.y / 2, 0.0},
-        {0.1, 0.1, 0.1}, global_local ? RED : GREEN);
-    rlPopMatrix();
-
-    auto modules = calculate_swerve_states(
-        ChassisSpeeds{{player_velocity.x, player_velocity.z},
-                      player_rot_velocity},
-        module_headings);
-
-    for (int i = 0; i < 4; i++) {
+    if (!debug) {
       rlPushMatrix();
-
       rlTranslatef(player_pos.GetX(), player_pos.GetY(), player_pos.GetZ());
+
       rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
-      rlTranslatef(modules_positions[i].x, 0.1, modules_positions[i].y);
-      rlRotatef(modules[i].rot * RAD2DEG, 0, 1, 0);
-      rlRotatef(90, 0, 0, -1);
-      rlTranslatef(0, -0.1 + 0.1 / 2, 0);
 
-      DrawModel(wheel_model, {0, 0, 0}, 1, RED);
+      DrawCubeV({0.0, Constants::ROBOT_SIZE.y, 0.0}, Constants::ROBOT_SIZE,
+                global_local ? GREEN : RED);
 
+      if (camera_index != 10) {
+        DrawCubeV(Vector3{0, Constants::ROBOT_SIZE.y / 2,
+                          -Constants::ROBOT_SIZE.z / 2} +
+                      Vector3{0.0, 0.1 + Constants::ROBOT_SIZE.y / 2, 0.0},
+                  {0.1, 0.1, 0.1}, global_local ? RED : GREEN);
+      }
+      rlPopMatrix();
+
+      auto modules = calculate_swerve_states(
+          ChassisSpeeds{{player_velocity.x, player_velocity.z},
+                        player_rot_velocity},
+          module_headings);
+
+      for (int i = 0; i < 4; i++) {
+        rlPushMatrix();
+
+        rlTranslatef(player_pos.GetX(), player_pos.GetY(), player_pos.GetZ());
+        rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
+        rlTranslatef(modules_positions[i].x, 0, modules_positions[i].y);
+        rlRotatef(modules[i].rot * RAD2DEG, 0, 1, 0);
+        rlRotatef(90, 0, 0, -1);
+        rlTranslatef(0, -0.1 + 0.1 / 2, 0);
+
+        DrawModel(wheel_model, {0, 0, 0}, 1, RED);
+
+        rlPopMatrix();
+      }
+    } else {
+      rlPushMatrix();
+      rlTranslatef(player_pos.GetX(), player_pos.GetY(), player_pos.GetZ());
+
+      rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
+
+      DrawCubeV({0.0, 0.0, 0.0}, Constants::ROBOT_SIZE,
+                global_local ? GREEN : RED);
       rlPopMatrix();
     }
 
