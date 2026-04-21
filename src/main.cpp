@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <print>
 
@@ -33,144 +34,118 @@
 
 using namespace JPH::literals;
 
-constexpr float CONTROLER_DEADBAND = 0.01;
+class Scene {
+ public:
+  Scene() {}
+  ~Scene() {}
 
-std::array<Camera, 4> camera_perspectives = {
+  void virtual step() {}
 
-    Camera3D{
-        .position = Vector3{0.0f, 5.0f, 5.0f},
-        .target = Vector3{0.0f, 0.0f, 0.0f},
-        .up = Vector3{0.0f, 1.0f, 0.0f},
-        .fovy = 90.0f,
-        .projection = CAMERA_PERSPECTIVE,
-    },
-    Camera3D{
-        .position = Vector3{9.0f, 1.5f, 3.0f},
-        .target = Vector3{0.0f, 1.0f, 0.0f},
-        .up = Vector3{0.0f, 1.0f, 0.0f},
-        .fovy = 90.0f,
-        .projection = CAMERA_PERSPECTIVE,
-    },
-    Camera3D{
-        .position = Vector3{9.0f, 1.5f, 1.0f},
-        .target = Vector3{0.0f, 1.0f, 0.0f},
-        .up = Vector3{0.0f, 1.0f, 0.0f},
-        .fovy = 90.0f,
-        .projection = CAMERA_PERSPECTIVE,
-    },
-    Camera3D{
-        .position = Vector3{9.0f, 1.5f, -2.0f},
-        .target = Vector3{0.0f, 1.0f, 0.0f},
-        .up = Vector3{0.0f, 1.0f, 0.0f},
-        .fovy = 90.0f,
-        .projection = CAMERA_PERSPECTIVE,
-    }};
+ private:
+};
 
-int main() {
-  GamepadControlProxy controller_info;
-  const int screenWidth = 800;
-  const int screenHeight = 450;
-
-  InitWindow(screenWidth, screenHeight, "EvilAwesomeBagelSimulator");
-  SetConfigFlags(FLAG_FULLSCREEN_MODE | FLAG_WINDOW_RESIZABLE);
+class GameScene : Scene {
+ private:
+  Shader shader =
+      LoadShader(TextFormat("../release/lighting.vs", GLSL_VERSION),
+                 TextFormat("../release/lighting.fs", GLSL_VERSION));
+  Camera3D camera;
 
   float speed_modifier = 1;  // slowmode stuff
 
   bool time_trials = false;
   float start_time = GetTime();
+  JPH::BodyID player_id;
 
-  time_trials = true;  // delete this later and make a function to enable time
-                       // trials ingame
-
-  Camera3D camera;
-  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
-  camera.up =
-      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;            // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
-
-  Shader shader =
-      LoadShader(TextFormat("../release/lighting.vs", GLSL_VERSION),
-                 TextFormat("../release/lighting.fs", GLSL_VERSION));
-
-  shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
-
-  int ambientLoc = GetShaderLocation(shader, "ambient");
-  float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
-  SetShaderValue(shader, ambientLoc, ambient_lighting, SHADER_UNIFORM_VEC4);
-
-  Light lights[MAX_LIGHTS];
-  lights[0] = CreateLight(LIGHT_POINT, Vector3{0, 4, -4}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader);
-  lights[1] = CreateLight(LIGHT_POINT, Vector3{0, 4, 4}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader);
-  lights[2] = CreateLight(LIGHT_POINT, Vector3{-10, 4, 0}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader);
-  lights[3] = CreateLight(LIGHT_POINT, Vector3{10, 4, 0}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader);
-
-  Model model = LoadModel("../release/rebuilt.gltf");
-  for (int i = 0; i < model.materialCount; i++) {
-    model.materials[i].shader = shader;
-  }
-
-  Model sphere_model = LoadModelFromMesh(GenMeshSphere(0.15f, 20, 20));
-  for (int i = 0; i < sphere_model.materialCount; i++) {
-    sphere_model.materials[i].shader = shader;
-  }
-
-  DisableCursor();
-
-  SetTargetFPS(30); /*
-  is the max fps locked at 30 for you too? (doesn't reach 60
-  even when SetTargetFPS(60))
-  */
-
-  JoltWrapper::init();
-  JoltWrapper jolt(shader);
-
-  /// sphere stuff
-  for (size_t i = 0; i < 100; i++) {
-    jolt.make_ball();
-  }
-
-  JPH::BodyCreationSettings player_settings(
-      new JPH::BoxShape(JPH::RVec3(Constants::ROBOT_SIZE.x / 2,
-                                   Constants::ROBOT_SIZE.y / 2,
-                                   Constants::ROBOT_SIZE.z / 2)),
-      JPH::RVec3(0, 1, 0), JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
-      Layers::MOVING);
-
-  JPH::MassProperties msp;
-  msp.mMass = 30;
-  msp.ScaleToMass(1);
-
-  player_settings.mMassPropertiesOverride = msp;
-  player_settings.mOverrideMassProperties =
-      JPH::EOverrideMassProperties::MassAndInertiaProvided;
-
-  JPH::BodyID player_id = jolt.get_interface().CreateAndAddBody(
-      player_settings, JPH::EActivation::Activate);
-  jolt.get_interface().SetMaxLinearVelocity(player_id, 5);
-  jolt.get_interface().SetMaxAngularVelocity(player_id, 5);
-  jolt.get_interface().SetFriction(player_id, 2);
+  JoltWrapper jolt;
+  uint32_t camera_index = 0;
+  GamepadControlProxy controller_info;
+  bool global_local = false;
+  double default_rot = 0;
   std::array<float, 4> module_headings = {0, 0, 0, 0};
 
-  auto wheel_mesh = GenMeshCylinder(0.1, 0.1, 10);
-  auto wheel_model = LoadModelFromMesh(wheel_mesh);
-  for (int i = 0; i < wheel_model.materialCount; i++) {
-    wheel_model.materials[i].shader = shader;
-  }
-
-  bool global_local = true;
-  float default_rot = 0;
-
-  jolt.physics_system.OptimizeBroadPhase();
-
+  Model wheel_model;
+  Model sphere_model;
+  Model model;
   bool debug = false;
-  size_t camera_index = 0;
-  while (!WindowShouldClose()) {
+
+ public:
+  GameScene() : jolt(shader) {
+    time_trials = true;  // delete this later and make a function to enable time
+                         // trials ingame
+
+    camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
+    camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
+    camera.up = Vector3{0.0f, 1.0f,
+                        0.0f};  // Camera up vector (rotation towards target)
+    camera.fovy = 90.0f;        // Camera field-of-view Y
+    camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
+
+    shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
+
+    int ambientLoc = GetShaderLocation(shader, "ambient");
+    float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
+    SetShaderValue(shader, ambientLoc, ambient_lighting, SHADER_UNIFORM_VEC4);
+
+    Light lights[MAX_LIGHTS];
+    lights[0] = CreateLight(LIGHT_POINT, Vector3{0, 4, -4}, Vector3Zero(),
+                            Color{50, 50, 50, 50}, shader);
+    lights[1] = CreateLight(LIGHT_POINT, Vector3{0, 4, 4}, Vector3Zero(),
+                            Color{50, 50, 50, 50}, shader);
+    lights[2] = CreateLight(LIGHT_POINT, Vector3{-10, 4, 0}, Vector3Zero(),
+                            Color{50, 50, 50, 50}, shader);
+    lights[3] = CreateLight(LIGHT_POINT, Vector3{10, 4, 0}, Vector3Zero(),
+                            Color{50, 50, 50, 50}, shader);
+
+    model = LoadModel("../release/rebuilt.gltf");
+    for (int i = 0; i < model.materialCount; i++) {
+      model.materials[i].shader = shader;
+    }
+
+    sphere_model = LoadModelFromMesh(GenMeshSphere(0.15f, 20, 20));
+    for (int i = 0; i < sphere_model.materialCount; i++) {
+      sphere_model.materials[i].shader = shader;
+    }
+
+    DisableCursor();
+
+    /// sphere stuff
+    for (size_t i = 0; i < 100; i++) {
+      jolt.make_ball();
+    }
+
+    JPH::BodyCreationSettings player_settings(
+        new JPH::BoxShape(JPH::RVec3(Constants::ROBOT_SIZE.x / 2,
+                                     Constants::ROBOT_SIZE.y / 2,
+                                     Constants::ROBOT_SIZE.z / 2)),
+        JPH::RVec3(0, 1, 0), JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
+        Layers::MOVING);
+
+    JPH::MassProperties msp;
+    msp.mMass = 30;
+    msp.ScaleToMass(1);
+
+    player_settings.mMassPropertiesOverride = msp;
+    player_settings.mOverrideMassProperties =
+        JPH::EOverrideMassProperties::MassAndInertiaProvided;
+
+    player_id = jolt.get_interface().CreateAndAddBody(
+        player_settings, JPH::EActivation::Activate);
+    jolt.get_interface().SetMaxLinearVelocity(player_id, 5);
+    jolt.get_interface().SetMaxAngularVelocity(player_id, 5);
+    jolt.get_interface().SetFriction(player_id, 2);
+
+    auto wheel_mesh = GenMeshCylinder(0.1, 0.1, 10);
+    wheel_model = LoadModelFromMesh(wheel_mesh);
+    for (int i = 0; i < wheel_model.materialCount; i++) {
+      wheel_model.materials[i].shader = shader;
+    }
+
+    jolt.physics_system.OptimizeBroadPhase();
+  }
+  ~GameScene() {}
+
+  void step() override {
     controller_info.step();
     jolt.update();
     auto player_pos = jolt.get_interface().GetPosition(player_id);
@@ -233,10 +208,6 @@ int main() {
     SetShaderValue(shader, shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos,
                    SHADER_UNIFORM_VEC3);
 
-    BeginDrawing();
-
-    ClearBackground(BLACK);
-
     BeginMode3D(camera);
 
     BeginShaderMode(shader);
@@ -252,15 +223,18 @@ int main() {
 
     Vector3 player_velocity = Vector3Zero();
     float player_rot_velocity = 0;
-    if (std::abs(controller_info.joystick_axis[0]) > CONTROLER_DEADBAND) {
+    if (std::abs(controller_info.joystick_axis[0]) >
+        Constants::CONTROLER_DEADBAND) {
       player_velocity.x += std::pow(controller_info.joystick_axis[0], 3.0) * 5;
     }
 
-    if (std::abs(controller_info.joystick_axis[1]) > CONTROLER_DEADBAND) {
+    if (std::abs(controller_info.joystick_axis[1]) >
+        Constants::CONTROLER_DEADBAND) {
       player_velocity.z += std::pow(controller_info.joystick_axis[1], 3.0) * 5;
     }
 
-    if (std::abs(controller_info.joystick_axis[2]) > CONTROLER_DEADBAND) {
+    if (std::abs(controller_info.joystick_axis[2]) >
+        Constants::CONTROLER_DEADBAND) {
       player_rot_velocity -=
           std::pow(controller_info.joystick_axis[2], 3.0) * 3;
     }
@@ -361,6 +335,61 @@ int main() {
           TextFormat("Time: %.2f", ((GetTime() - start_time))), 10, 40, 20,
           SKYBLUE);
     }
+  }
+
+ private:
+  std::array<Camera, 4> camera_perspectives = {
+
+      Camera3D{
+          .position = Vector3{0.0f, 5.0f, 5.0f},
+          .target = Vector3{0.0f, 0.0f, 0.0f},
+          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .fovy = 90.0f,
+          .projection = CAMERA_PERSPECTIVE,
+      },
+      Camera3D{
+          .position = Vector3{9.0f, 1.5f, 3.0f},
+          .target = Vector3{0.0f, 1.0f, 0.0f},
+          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .fovy = 90.0f,
+          .projection = CAMERA_PERSPECTIVE,
+      },
+      Camera3D{
+          .position = Vector3{9.0f, 1.5f, 1.0f},
+          .target = Vector3{0.0f, 1.0f, 0.0f},
+          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .fovy = 90.0f,
+          .projection = CAMERA_PERSPECTIVE,
+      },
+      Camera3D{
+          .position = Vector3{9.0f, 1.5f, -2.0f},
+          .target = Vector3{0.0f, 1.0f, 0.0f},
+          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .fovy = 90.0f,
+          .projection = CAMERA_PERSPECTIVE,
+      }};
+};
+
+int main() {
+  const int screenWidth = 800;
+  const int screenHeight = 450;
+
+  InitWindow(screenWidth, screenHeight, "EvilAwesomeBagelSimulator");
+  SetConfigFlags(FLAG_FULLSCREEN_MODE | FLAG_WINDOW_RESIZABLE);
+
+  SetTargetFPS(30); /*
+  is the max fps locked at 30 for you too? (doesn't reach 60
+  even when SetTargetFPS(60))
+  */
+
+  JoltWrapper::init();
+  auto game = GameScene();
+
+  while (!WindowShouldClose()) {
+    BeginDrawing();
+
+    ClearBackground(BLACK);
+    game.step();
 
     EndDrawing();
   }
