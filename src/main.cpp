@@ -72,13 +72,21 @@ int main() {
 
   InitWindow(screenWidth, screenHeight, "EvilAwesomeBagelSimulator");
 
+  float speed_modifier = 1; // slowmode stuff
+
+  bool time_trials = false;
+  float start_time = GetTime();
+
+  time_trials = true; // delete this later and make a function to enable time
+                      // trials ingame
+
   Camera3D camera;
-  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
+  camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
   camera.up =
-      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;            // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
+      Vector3{0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
+  camera.fovy = 90.0f;           // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
 
   Shader shader =
       LoadShader(TextFormat("../release/lighting.vs", GLSL_VERSION),
@@ -112,7 +120,10 @@ int main() {
 
   DisableCursor();
 
-  SetTargetFPS(30);
+  SetTargetFPS(30); /*
+  is the max fps locked at 30 for you too? (doesn't reach 60
+  even when SetTargetFPS(60))
+  */
 
   JoltWrapper::init();
   JoltWrapper jolt(shader);
@@ -209,6 +220,11 @@ int main() {
       controller_info.keyboard_overide = true;
     }
 
+    if (IsKeyDown(KEY_LEFT_SHIFT) && camera_index == 11) {
+      camera.position.y -= 0.19;
+      camera.target.y -= 0.19;
+    }
+
     float cameraPos[3] = {camera.position.x, camera.position.y,
                           camera.position.z};
     SetShaderValue(shader, shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos,
@@ -278,17 +294,23 @@ int main() {
     rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
 
     DrawCubeV({0.0, 0.2 + Constants::ROBOT_SIZE.y / 2, 0.0},
-              Constants::ROBOT_SIZE, global_local ? GREEN : RED);
+              Constants::ROBOT_SIZE, global_local ? GREEN : MAGENTA);
 
     DrawCubeV(
         Vector3{0, Constants::ROBOT_SIZE.y / 2, -Constants::ROBOT_SIZE.z / 2} +
             Vector3{0.0, 0.2 + Constants::ROBOT_SIZE.y / 2, 0.0},
-        {0.1, 0.1, 0.1}, global_local ? RED : GREEN);
+        {0.1, 0.1, 0.1}, global_local ? MAGENTA : GREEN);
     rlPopMatrix();
 
+    if (IsKeyDown(KEY_C)) {
+      printf("slowmode\n");
+      speed_modifier = 0.5;
+    }
+
     auto modules = calculate_swerve_states(
-        ChassisSpeeds{{player_velocity.x, player_velocity.z},
-                      player_rot_velocity},
+        ChassisSpeeds{{player_velocity.x * speed_modifier,
+                       player_velocity.z * speed_modifier},
+                      player_rot_velocity * speed_modifier},
         module_headings);
 
     for (int i = 0; i < 4; i++) {
@@ -301,7 +323,7 @@ int main() {
       rlRotatef(90, 0, 0, -1);
       rlTranslatef(0, -0.1 + 0.1 / 2, 0);
 
-      DrawModel(wheel_model, {0, 0, 0}, 1, RED);
+      DrawModel(wheel_model, {0, 0, 0}, 1, MAGENTA);
 
       rlPopMatrix();
     }
@@ -315,6 +337,20 @@ int main() {
     EndMode3D();
 
     DrawFPS(10, 10);
+
+    DrawText( // displaying coordinates of the robot on the field
+        TextFormat("X: %f, Z: %f\n", player_pos.GetX(), player_pos.GetZ()), 10,
+        420, 20, ORANGE);
+
+    if (IsKeyPressed(KEY_T)) {
+      start_time = GetTime();
+    }
+
+    if (time_trials) {
+      DrawText( // displaying the timer for the time trials
+          TextFormat("Time: %.2f",((GetTime() - start_time))),
+          10, 40, 20, SKYBLUE);
+    }
 
     EndDrawing();
   }
