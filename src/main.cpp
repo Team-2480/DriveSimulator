@@ -252,17 +252,24 @@ int main() {
 
     Vector3 player_velocity = Vector3Zero();
     float player_rot_velocity = 0;
+
+    if (IsKeyDown(KEY_C)) {
+      speed_modifier = 0.1;
+    } else if (!IsKeyDown(KEY_C)) {
+      speed_modifier = 1;
+    }
+
     if (std::abs(controller_info.joystick_axis[0]) > CONTROLER_DEADBAND) {
-      player_velocity.x += std::pow(controller_info.joystick_axis[0], 3.0) * 5;
+      player_velocity.x += std::pow(controller_info.joystick_axis[0], 3.0) * 5 * speed_modifier;
     }
 
     if (std::abs(controller_info.joystick_axis[1]) > CONTROLER_DEADBAND) {
-      player_velocity.z += std::pow(controller_info.joystick_axis[1], 3.0) * 5;
+      player_velocity.z += std::pow(controller_info.joystick_axis[1], 3.0) * 5 * speed_modifier;
     }
 
     if (std::abs(controller_info.joystick_axis[2]) > CONTROLER_DEADBAND) {
       player_rot_velocity -=
-          std::pow(controller_info.joystick_axis[2], 3.0) * 3;
+          std::pow(controller_info.joystick_axis[2], 3.0) * 3 * speed_modifier;
     }
 
     if (controller_info.joystick_inputs[4] &&
