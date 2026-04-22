@@ -376,6 +376,7 @@ class SceneManager {
   SceneManager() {
     InitWindow(screenWidth, screenHeight, "EvilAwesomeBagelSimulator");
     SetConfigFlags(FLAG_FULLSCREEN_MODE | FLAG_WINDOW_RESIZABLE);
+    SetTraceLogLevel(LOG_ERROR);
 
     SetTargetFPS(30);
     /*
