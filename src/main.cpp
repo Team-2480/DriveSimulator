@@ -90,6 +90,7 @@ class SceneManager {
  private:
   Shader shader;
   ProgramState state;
+    Light lights[MAX_LIGHTS];
 
  public:
   SceneManager() {
@@ -117,7 +118,6 @@ class SceneManager {
     float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
     SetShaderValue(shader, ambient_loc, ambient_lighting, SHADER_UNIFORM_VEC4);
 
-    Light lights[MAX_LIGHTS];
     lights[0] = CreateLight(LIGHT_POINT, Vector3{0, 4, -4}, Vector3Zero(),
                             Color{50, 50, 50, 50}, shader);
     lights[1] = CreateLight(LIGHT_POINT, Vector3{0, 4, 4}, Vector3Zero(),
