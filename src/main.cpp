@@ -86,11 +86,13 @@ class MenuScene final : public Scene {
   }
 };
 
+
+static Light lights[MAX_LIGHTS];
+
 class SceneManager {
  private:
   Shader shader;
   ProgramState state;
-    Light lights[MAX_LIGHTS];
 
  public:
   SceneManager() {
