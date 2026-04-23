@@ -86,12 +86,11 @@ class MenuScene final : public Scene {
   }
 };
 
-
 static Light lights[MAX_LIGHTS];
+Shader shader;
 
 class SceneManager {
  private:
-  Shader shader;
   ProgramState state;
 
  public:
@@ -110,24 +109,6 @@ class SceneManager {
     */
 
     JoltWrapper::init();
-
-    shader = LoadShader((Constants::release_folder + "lighting.vs").c_str(),
-                        (Constants::release_folder + "lighting.fs").c_str());
-
-    shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
-
-    int ambient_loc = GetShaderLocation(shader, "ambient");
-    float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
-    SetShaderValue(shader, ambient_loc, ambient_lighting, SHADER_UNIFORM_VEC4);
-
-    lights[0] = CreateLight(LIGHT_POINT, Vector3{0, 4, -4}, Vector3Zero(),
-                            Color{50, 50, 50, 50}, shader, 0);
-    lights[1] = CreateLight(LIGHT_POINT, Vector3{0, 4, 4}, Vector3Zero(),
-                            Color{50, 50, 50, 50}, shader, 1);
-    lights[2] = CreateLight(LIGHT_POINT, Vector3{-10, 4, 0}, Vector3Zero(),
-                            Color{50, 50, 50, 50}, shader, 2);
-    lights[3] = CreateLight(LIGHT_POINT, Vector3{10, 4, 0}, Vector3Zero(),
-                            Color{50, 50, 50, 50}, shader, 3);
 
     game_scene = new GameScene(state, shader);
     menu_scene = new MenuScene(state, shader);
@@ -179,6 +160,25 @@ void step() { manager->step(); }
 
 int main() {
   manager = new SceneManager;
+
+  shader = LoadShader((Constants::release_folder + "lighting.vs").c_str(),
+                      (Constants::release_folder + "lighting.fs").c_str());
+
+  shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
+
+  int ambient_loc = GetShaderLocation(shader, "ambient");
+  float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
+  SetShaderValue(shader, ambient_loc, ambient_lighting, SHADER_UNIFORM_VEC4);
+
+  lights[0] = CreateLight(LIGHT_POINT, Vector3{0, 4, -4}, Vector3Zero(),
+                          Color{50, 50, 50, 50}, shader, 0);
+  lights[1] = CreateLight(LIGHT_POINT, Vector3{0, 4, 4}, Vector3Zero(),
+                          Color{50, 50, 50, 50}, shader, 1);
+  lights[2] = CreateLight(LIGHT_POINT, Vector3{-10, 4, 0}, Vector3Zero(),
+                          Color{50, 50, 50, 50}, shader, 2);
+  lights[3] = CreateLight(LIGHT_POINT, Vector3{10, 4, 0}, Vector3Zero(),
+                          Color{50, 50, 50, 50}, shader, 3);
+
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(step, 0, 1);
 #else
