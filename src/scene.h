@@ -40,9 +40,13 @@ using namespace JPH::literals;
 
 struct ProgramState {
   enum ProgramScreen {
+    SCREEN_QUIT,
     SCREEN_MAIN_MENU,
+    SCREEN_CONTROL,
     SCREEN_GAME
   } screen = SCREEN_MAIN_MENU;
+
+  InputMethod input = INPUT_KEYBOARD;
 };
 
 class Scene {

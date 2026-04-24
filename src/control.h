@@ -6,14 +6,15 @@
 #include <map>
 
 #include "raylib.h"
+
+enum InputMethod { INPUT_KEYBOARD, INPUT_JOYSTICK };
+
 class GamepadControlProxy {
  public:
   GamepadControlProxy() {}
   ~GamepadControlProxy() {}
 
-  void step();
-
-  bool keyboard_overide = false;
+  void step(InputMethod method);
 
   bool has_gamepad = false;
   std::map<size_t, bool> gamepad_inputs;

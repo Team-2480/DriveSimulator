@@ -1,4 +1,7 @@
+#include <cinttypes>
+
 #include "config.h"
+#include "control.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rcamera.h"
@@ -10,6 +13,10 @@ class MenuScene final : public Scene {
   Font font;
   Model map_model;
   Shader& shader;
+  struct nk_image logo;
+  struct nk_image keyboard;
+  struct nk_image joystick;
+
   Camera ui_camera{
       .position = Vector3{0.0f, -5.0f, 10.0f},
       .target = Vector3{0.0f, 0.0f, 0.0f},
@@ -25,11 +32,6 @@ class MenuScene final : public Scene {
       .projection = CAMERA_PERSPECTIVE,
   };
 
-  Mesh torus = GenMeshTorus(0.4f, 6, 10, 8);
-  Model torus_model = LoadModelFromMesh(torus);
-  Model name_model = LoadModel(RELEASE_FOLDER("name.glb"));
-  float torus_rotate;
-
  public:
   MenuScene(ProgramState& program_state, Shader& shader)
       : Scene(program_state), shader(shader) {
@@ -38,16 +40,23 @@ class MenuScene final : public Scene {
                       20, NULL, 0);
     ctx = InitNuklearEx(font, font_size);
 
+    logo = LoadNuklearImage(RELEASE_FOLDER("logo.png"));
+    keyboard = LoadNuklearImage(RELEASE_FOLDER("keyboard.png"));
+    joystick = LoadNuklearImage(RELEASE_FOLDER("3dpro.png"));
+
     map_model = LoadModel(RELEASE_FOLDER("map.glb"));
     for (int i = 0; i < map_model.materialCount; i++) {
       map_model.materials[i].shader = shader;
     }
   }
   ~MenuScene() {
+    UnloadNuklearImage(logo);
+    UnloadNuklearImage(keyboard);
+    UnloadNuklearImage(joystick);
+
     UnloadNuklear(ctx);
     UnloadFont(font);
     UnloadModel(map_model);
-    UnloadModel(torus_model);
   }
 
   void draw() override {
@@ -66,28 +75,7 @@ class MenuScene final : public Scene {
     EndMode3D();
 
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {0, 0, 0, 100});
-
-    BeginMode3D(ui_camera);
-    // BeginShaderMode(shader);
-
-    rlPushMatrix();
-    rlTranslatef(0, 3, 0);
-    rlRotatef(-30, 1, 0, 0);
-    rlRotatef(torus_rotate, 0, 0, 1);
-    torus_rotate += 1;
-
-    DrawModel(torus_model, {0, 0, 0}, 1, BEIGE);
-    rlPopMatrix();
-
-    rlPushMatrix();
-    rlTranslatef(0, 3, 0);
-    rlRotatef(-30, 1, 0, 0);
-
-    DrawModel(name_model, {0, 10, 5}, 1, WHITE);
-    rlPopMatrix();
-
-    // EndShaderMode();
-    EndMode3D();
+    DrawTextEx(font, VERSION_STR " git " GIT_HASH, {10, 10}, 20, 0, GRAY);
 
     DrawNuklear(ctx);
   }
@@ -103,24 +91,99 @@ class MenuScene final : public Scene {
     */
 
     float center_x = GetScreenWidth() / 2.0f;
-    float width_x = std::min(600, GetScreenWidth());
+    float width_x = std::min(700, GetScreenWidth());
     float center_y = GetScreenHeight() / 2.0f;
-    float width_y = std::min(300, GetScreenHeight());
+    float width_y = std::min(500, GetScreenHeight());
+
+    float aspect_ratio = (float)logo.h / logo.w;
 
     ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 0});
+    ctx->style.button.rounding = 20;
+
     if (nk_begin(ctx, "Nuklear",
                  nk_rect(center_x - width_x / 2, center_y - width_y / 2,
                          width_x, width_y),
                  NK_WINDOW_BACKGROUND)) {
-      nk_layout_row_dynamic(ctx, 50, 1);
+      switch (state.screen) {
+        default:
+        case ProgramState::SCREEN_MAIN_MENU:
+          nk_layout_row_dynamic(ctx, aspect_ratio * width_x, 1);
 
-      // logo
-      nk_spacer(ctx);
-      nk_spacer(ctx);
-      nk_spacer(ctx);
+          nk_image(ctx, logo);
 
-      if (nk_button_label(ctx, "Play")) {
-        state.screen = ProgramState::SCREEN_GAME;
+          nk_layout_row_dynamic(ctx, 50, 1);
+          nk_spacer(ctx);
+          nk_layout_row_dynamic(ctx, 50, 3);
+
+          nk_spacer(ctx);
+          if (nk_button_label(ctx, "Play")) {
+            state.screen = ProgramState::SCREEN_CONTROL;
+          }
+          nk_spacer(ctx);
+
+          nk_spacer(ctx);
+          if (nk_button_label(ctx, "Quit")) {
+            state.screen = ProgramState::SCREEN_QUIT;
+          }
+          nk_spacer(ctx);
+          break;
+        case ProgramState::SCREEN_CONTROL:
+          nk_layout_row_dynamic(ctx, width_y - 20, 2);
+          float height = width_y - 60;
+
+          ctx->style.window.fixed_background =
+              nk_style_item_color({255, 255, 255, 200});
+          ctx->style.window.rounding = 20;
+          ctx->style.window.group_padding = {20, 20};
+          ctx->style.text.color = {50, 50, 50, 255};
+
+          if (nk_group_begin(ctx, "Keyboard", NK_WINDOW_BACKGROUND)) {
+            float keyboard_height = ((float)keyboard.h / keyboard.w) *
+                                    nk_layout_space_bounds(ctx).w;
+
+            nk_layout_row_dynamic(ctx, keyboard_height, 1);
+            nk_image(ctx, keyboard);
+
+            nk_layout_row_dynamic(ctx, height - keyboard_height - 60, 1);
+
+            nk_label(ctx,
+                     "WASD lateral & JL rotational \nQ for field vs robot "
+                     "releative\nE to reset field forward\nNote: Scores cannot "
+                     "be submited to "
+                     "\nleaderboards.",
+                     NK_TEXT_LEFT);
+
+            nk_layout_row_dynamic(ctx, 50, 1);
+            if (nk_button_label(ctx, "Pick")) {
+              state.input = INPUT_KEYBOARD;
+              state.screen = ProgramState::SCREEN_GAME;
+            }
+            nk_group_end(ctx);
+          }
+
+          if (nk_group_begin(ctx, "Joystick", NK_WINDOW_BACKGROUND)) {
+            float joystick_height = ((float)joystick.h / joystick.w) *
+                                    nk_layout_space_bounds(ctx).w;
+            nk_layout_row_dynamic(ctx, joystick_height, 1);
+            nk_image(ctx, joystick);
+
+            nk_layout_row_dynamic(ctx, height - joystick_height - 60, 1);
+            nk_label(ctx,
+                     "Joystick for movement\nTwist to turn\nButton 12 to "
+                     "toggle field vs robot relative\nButton 6 to "
+                     "reset field forward",
+                     NK_TEXT_LEFT);
+
+            nk_layout_row_dynamic(ctx, 50, 1);
+            if (nk_button_label(ctx, "Pick")) {
+              state.input = INPUT_JOYSTICK;
+              state.screen = ProgramState::SCREEN_GAME;
+            }
+
+            nk_group_end(ctx);
+          }
+
+          break;
       }
     }
     nk_end(ctx);
@@ -172,13 +235,22 @@ class SceneManager {
   std::optional<MenuScene*> menu_scene = std::nullopt;
   std::optional<Scene*> scene = std::nullopt;
 
-  void step() {
+  bool step() {
+    if (WindowShouldClose()) {
+      return false;
+    }
+
     switch (state.screen) {
+      case ProgramState::SCREEN_CONTROL:
+        [[fallthrough]];
       case ProgramState::SCREEN_MAIN_MENU:
         scene = static_cast<Scene*>(menu_scene.value());
         break;
       case ProgramState::SCREEN_GAME:
         scene = static_cast<Scene*>(game_scene.value());
+        break;
+      case ProgramState::SCREEN_QUIT:
+        return false;
         break;
     }
     if (scene.has_value()) {
@@ -192,6 +264,7 @@ class SceneManager {
     }
 
     EndDrawing();
+    return true;
   }
 
  private:
@@ -201,7 +274,7 @@ class SceneManager {
 
 static SceneManager* manager;
 
-void step() { manager->step(); }
+bool step() { return manager->step(); }
 
 int main() {
   manager = new SceneManager;
@@ -224,8 +297,7 @@ int main() {
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(step, 0, 1);
 #else
-  while (!WindowShouldClose()) {
-    step();
+  while (step()) {
   }
 #endif
 

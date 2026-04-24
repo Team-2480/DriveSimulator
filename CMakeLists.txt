@@ -16,4 +16,11 @@ endif ()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+execute_process(
+        COMMAND git log -1 --format=%h
+        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+        OUTPUT_VARIABLE GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+
 add_subdirectory(src)

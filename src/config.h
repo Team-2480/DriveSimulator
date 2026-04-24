@@ -23,5 +23,6 @@ constexpr std::string release_folder = "../release/";
 #define RELEASE_FOLDER(value)  "../release/" value
 #endif
 
+#define VERSION_STR "v0.0.1"
 
 }  // namespace Constants

@@ -1,3 +1,6 @@
+#include <cstdio>
+
+#include "control.h"
 #include "scene.h"
 GameScene::GameScene(ProgramState& program_state, Shader& shader)
     : Scene(program_state), shader(shader), jolt(shader) {
@@ -57,7 +60,7 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   jolt.physics_system.OptimizeBroadPhase();
 }
 void GameScene::step() {
-  controller_info.step();
+  controller_info.step(state.input);
   jolt.update();
   auto player_pos = jolt.get_interface().GetPosition(player_id);
   auto player_rot = jolt.get_interface().GetRotation(player_id);
