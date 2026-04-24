@@ -275,6 +275,7 @@ class SceneManager {
 static SceneManager* manager;
 
 bool step() { return manager->step(); }
+void step_void() { manager->step(); }
 
 int main() {
   manager = new SceneManager;
@@ -295,7 +296,7 @@ int main() {
                           Color{50, 50, 50, 50}, shader, 3);
 
 #if defined(PLATFORM_WEB)
-  emscripten_set_main_loop(step, 0, 1);
+  emscripten_set_main_loop(step_void, 0, 1);
 #else
   while (step()) {
   }
