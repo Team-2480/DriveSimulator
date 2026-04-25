@@ -74,4 +74,7 @@ void main()
 
     // Gamma correction
     gl_FragColor = pow(finalColor, vec4(1.0/2.2));
+    if (colDiffuse.a != 1.0) {
+      gl_FragColor = vec4(gl_FragColor.xyz, 0.2);
+    }
 }

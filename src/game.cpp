@@ -1,6 +1,8 @@
 #include <cstdio>
 
 #include "control.h"
+#include "raylib.h"
+#include "raymath.h"
 #include "scene.h"
 GameScene::GameScene(ProgramState& program_state, Shader& shader)
     : Scene(program_state), shader(shader), jolt(shader) {
@@ -22,6 +24,10 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   sphere_model = LoadModelFromMesh(GenMeshSphere(0.15f, 20, 20));
   for (int i = 0; i < sphere_model.materialCount; i++) {
     sphere_model.materials[i].shader = shader;
+  }
+
+  for (int i = 0; i < player_model.materialCount; i++) {
+    player_model.materials[i].shader = shader;
   }
 
   /// sphere stuff
@@ -58,12 +64,54 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   }
 
   jolt.physics_system.OptimizeBroadPhase();
+
+  int font_size = 20;
+  font = LoadFontEx((Constants::release_folder + "Lato-Regular.ttf").c_str(),
+                    20, NULL, 0);
+  ctx = InitNuklearEx(font, font_size);
 }
 void GameScene::step() {
+  if (IsKeyPressed(KEY_ESCAPE)) {
+    paused = !paused;
+  }
+
+  if (!paused) {
+    game_step();
+  } else {
+    UpdateNuklear(ctx);
+
+    float center_x = GetScreenWidth() / 2.0f;
+    float width_x = std::min(700, GetScreenWidth());
+    float center_y = GetScreenHeight() / 2.0f;
+    float width_y = std::min(500, GetScreenHeight());
+
+    ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 0});
+    ctx->style.button.rounding = 20;
+
+    if (nk_begin(ctx, "Nuklear",
+                 nk_rect(center_x - width_x / 2, center_y - width_y / 2,
+                         width_x, width_y),
+                 NK_WINDOW_BACKGROUND)) {
+      nk_layout_row_dynamic(ctx, 50, 1);
+      nk_spacer(ctx);
+      nk_layout_row_dynamic(ctx, 50, 3);
+
+      nk_spacer(ctx);
+      if (nk_button_label(ctx, "Return To Home")) {
+        state.screen = ProgramState::SCREEN_MAIN_MENU;
+      }
+    }
+    nk_end(ctx);
+  }
+}
+
+void GameScene::game_step() {
   controller_info.step(state.input);
   jolt.update();
   auto player_pos = jolt.get_interface().GetPosition(player_id);
   auto player_rot = jolt.get_interface().GetRotation(player_id);
+  auto player_real_ang_rot = jolt.get_interface().GetAngularVelocity(player_id);
+  auto player_real_velocity = jolt.get_interface().GetLinearVelocity(player_id);
 
   JPH::Vec3 axis;
   float angle;
@@ -84,6 +132,10 @@ void GameScene::step() {
   }
 
   if (camera_index < camera_perspectives.size()) {
+    camera_perspectives[camera_index].target = Vector3Lerp(
+        camera_perspectives[camera_index].target,
+        {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()}, 0.5);
+
     camera = camera_perspectives[camera_index];
   } else if (camera_index == 10) {
     auto forward = Vector3RotateByAxisAngle(
@@ -110,37 +162,13 @@ void GameScene::step() {
     camera.position.y -= 0.19;
     camera.target.y -= 0.19;
   }
-}
-void GameScene::draw() {
-  auto player_pos = jolt.get_interface().GetPosition(player_id);
-  auto player_rot = jolt.get_interface().GetRotation(player_id);
-  auto player_real_ang_rot = jolt.get_interface().GetAngularVelocity(player_id);
-  auto player_real_velocity = jolt.get_interface().GetLinearVelocity(player_id);
-
-  JPH::Vec3 axis;
-  float angle;
-  player_rot.GetAxisAngle(axis, angle);
-
-  float cameraPos[3] = {camera.position.x, camera.position.y,
-                        camera.position.z};
-  SetShaderValue(shader, shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos,
-                 SHADER_UNIFORM_VEC3);
-
-  BeginMode3D(camera);
-
-  BeginShaderMode(shader);
 
   if (IsKeyPressed(KEY_P)) {
     debug = !debug;
   }
 
-  if (!debug)
-    DrawModel(model, {}, 1.0f, WHITE);
-  else
-    DrawModel(jolt.convex_model, {}, 1.0f, WHITE);
-
-  Vector3 player_velocity = Vector3Zero();
-  float player_rot_velocity = 0;
+  player_velocity = Vector3Zero();
+  player_rot_velocity = 0;
 
   if (controller_info.joystick_inputs[0]) {
     speed_modifier = 0.1;
@@ -188,9 +216,37 @@ void GameScene::draw() {
       player_id,
       {corrected_player_velocity.x - player_real_velocity.GetX() * 0.1f, 0,
        corrected_player_velocity.z - player_real_velocity.GetZ() * 0.1f},
-      JPH::Vec3{-player_rot.GetX() * 5,
+      JPH::Vec3{-player_rot.GetX() * 1,
                 player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
-                -player_rot.GetZ() * 5});
+                -player_rot.GetZ() * 1});
+}
+void GameScene::draw() {
+  game_draw();
+
+  if (paused) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {0, 0, 0, 100});
+
+    DrawNuklear(ctx);
+  }
+}
+void GameScene::game_draw() {
+  auto player_pos = jolt.get_interface().GetPosition(player_id);
+  auto player_rot = jolt.get_interface().GetRotation(player_id);
+  auto player_real_ang_rot = jolt.get_interface().GetAngularVelocity(player_id);
+  auto player_real_velocity = jolt.get_interface().GetLinearVelocity(player_id);
+
+  JPH::Vec3 axis;
+  float angle;
+  player_rot.GetAxisAngle(axis, angle);
+
+  float cameraPos[3] = {camera.position.x, camera.position.y,
+                        camera.position.z};
+  SetShaderValue(shader, shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos,
+                 SHADER_UNIFORM_VEC3);
+
+  BeginBlendMode(BLEND_ALPHA);
+  BeginMode3D(camera);
+  BeginShaderMode(shader);
 
   if (!debug) {
     rlPushMatrix();
@@ -198,7 +254,7 @@ void GameScene::draw() {
 
     rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
 
-    DrawCubeV({0.0, Constants::ROBOT_SIZE.y, 0.0}, Constants::ROBOT_SIZE,
+    DrawModel(player_model, {0.0, Constants::ROBOT_SIZE.y, 0.0}, 1,
               global_local ? GREEN : MAGENTA);
 
     if (camera_index != 10) {
@@ -244,8 +300,14 @@ void GameScene::draw() {
     DrawModel(sphere_model, ball, 1.0f, YELLOW);
   }
 
+  if (!debug)
+    DrawModel(model, {}, 1.0f, WHITE);
+  else
+    DrawModel(jolt.convex_model, {}, 1.0f, WHITE);
+
   EndShaderMode();
   EndMode3D();
+  EndBlendMode();
 
   if (debug) {
     DrawFPS(10, 10);

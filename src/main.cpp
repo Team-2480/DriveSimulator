@@ -1,4 +1,5 @@
 #include <cinttypes>
+#include <memory>
 
 #include "config.h"
 #include "control.h"
@@ -201,8 +202,12 @@ class SceneManager {
 
  public:
   SceneManager() {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED |
+                   FLAG_MSAA_4X_HINT);
     InitWindow(screenWidth, screenHeight, "BagelSim");
+
+    rlEnableColorBlend();
+    rlSetBlendMode(RL_BLEND_ALPHA);
 
     shader = LoadShader((Constants::release_folder + "lighting.vs").c_str(),
                         (Constants::release_folder + "lighting.fs").c_str());
@@ -218,36 +223,31 @@ class SceneManager {
 
     JoltWrapper::init();
 
-    game_scene = new GameScene(state, shader);
-    menu_scene = new MenuScene(state, shader);
+    menu_scene = std::make_shared<MenuScene>(state, shader);
   }
   ~SceneManager() {
     JoltWrapper::free();
-    if (game_scene.has_value()) {
-      delete game_scene.value();
-    }
-    if (menu_scene.has_value()) {
-      delete menu_scene.value();
-    }
     UnloadShader(shader);
   }
-  std::optional<GameScene*> game_scene = std::nullopt;
-  std::optional<MenuScene*> menu_scene = std::nullopt;
-  std::optional<Scene*> scene = std::nullopt;
+  std::optional<std::shared_ptr<GameScene>> game_scene = std::nullopt;
+  std::optional<std::shared_ptr<MenuScene>> menu_scene = std::nullopt;
+  std::optional<std::shared_ptr<Scene>> scene = std::nullopt;
 
   bool step() {
-    if (WindowShouldClose()) {
-      return false;
-    }
-
     switch (state.screen) {
       case ProgramState::SCREEN_CONTROL:
         [[fallthrough]];
       case ProgramState::SCREEN_MAIN_MENU:
-        scene = static_cast<Scene*>(menu_scene.value());
+        if (game_scene.has_value()) {
+          game_scene = {};
+        }
+        scene = std::static_pointer_cast<Scene>(menu_scene.value());
         break;
       case ProgramState::SCREEN_GAME:
-        scene = static_cast<Scene*>(game_scene.value());
+        if (!game_scene.has_value()) {
+          game_scene = std::make_unique<GameScene>(state, shader);
+        }
+        scene = std::static_pointer_cast<Scene>(game_scene.value());
         break;
       case ProgramState::SCREEN_QUIT:
         return false;

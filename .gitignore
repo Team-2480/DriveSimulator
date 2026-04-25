@@ -4,3 +4,4 @@ webport/
 .cache/
 compile_commands.json
 .DS_Store
+*.blend1

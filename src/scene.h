@@ -65,6 +65,7 @@ class Scene {
 
 class GameScene final : public Scene {
  private:
+  bool paused = false;
   Shader& shader;
   Camera3D camera;
 
@@ -87,16 +88,33 @@ class GameScene final : public Scene {
   Model model;
   bool debug = false;
 
+  Font font;
+  nk_context* ctx;
+
+  Mesh player_cube =
+      GenMeshCube(Constants::ROBOT_SIZE.x, Constants::ROBOT_SIZE.y,
+                  Constants::ROBOT_SIZE.z);
+  Model player_model = LoadModelFromMesh(player_cube);
+
+  Vector3 player_velocity;
+  float player_rot_velocity;
+
  public:
   GameScene(ProgramState& program_state, Shader& shader);
   ~GameScene() {
     UnloadModel(wheel_model);
     UnloadModel(model);
     UnloadModel(sphere_model);
+    UnloadModel(player_model);
+    UnloadFont(font);
+
+    UnloadNuklear(ctx);
   }
 
   void step() override;
+  void game_step();
   void draw() override;
+  void game_draw();
 
  private:
   std::array<Camera, 4> camera_perspectives = {
@@ -109,21 +127,21 @@ class GameScene final : public Scene {
           .projection = CAMERA_PERSPECTIVE,
       },
       Camera3D{
-          .position = Vector3{9.0f, 1.5f, 3.0f},
+          .position = Vector3{8.5f, 1.5f, 3.0f},
           .target = Vector3{0.0f, 1.0f, 0.0f},
           .up = Vector3{0.0f, 1.0f, 0.0f},
           .fovy = 90.0f,
           .projection = CAMERA_PERSPECTIVE,
       },
       Camera3D{
-          .position = Vector3{9.0f, 1.5f, 1.0f},
+          .position = Vector3{8.0f, 1.5f, 1.0f},
           .target = Vector3{0.0f, 1.0f, 0.0f},
           .up = Vector3{0.0f, 1.0f, 0.0f},
           .fovy = 90.0f,
           .projection = CAMERA_PERSPECTIVE,
       },
       Camera3D{
-          .position = Vector3{9.0f, 1.5f, -2.0f},
+          .position = Vector3{8.5f, 1.5f, -2.0f},
           .target = Vector3{0.0f, 1.0f, 0.0f},
           .up = Vector3{0.0f, 1.0f, 0.0f},
           .fovy = 90.0f,
