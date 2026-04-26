@@ -70,6 +70,7 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
                     20, NULL, 0);
   ctx = InitNuklearEx(font, font_size);
 }
+
 void GameScene::step() {
   if (IsKeyPressed(KEY_ESCAPE)) {
     paused = !paused;
@@ -326,4 +327,6 @@ void GameScene::game_draw() {
         TextFormat("Time: %.2f", ((GetTime() - start_time))), 10, 40, 20,
         SKYBLUE);
   }
+
+  controller_info.draw(state.input);
 }

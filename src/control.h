@@ -7,7 +7,7 @@
 
 #include "raylib.h"
 
-enum InputMethod { INPUT_KEYBOARD, INPUT_JOYSTICK };
+enum InputMethod { INPUT_KEYBOARD, INPUT_JOYSTICK, INPUT_TOUCH };
 
 class GamepadControlProxy {
  public:
@@ -15,6 +15,7 @@ class GamepadControlProxy {
   ~GamepadControlProxy() {}
 
   void step(InputMethod method);
+  void draw(InputMethod method);
 
   bool has_gamepad = false;
   std::map<size_t, bool> gamepad_inputs;

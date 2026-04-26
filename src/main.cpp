@@ -78,7 +78,9 @@ class MenuScene final : public Scene {
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {0, 0, 0, 100});
     DrawTextEx(font, VERSION_STR " git " GIT_HASH, {10, 10}, 20, 0, GRAY);
 
+    BeginBlendMode(BLEND_ALPHA);
     DrawNuklear(ctx);
+    EndBlendMode();
   }
   void step() override {
     UpdateNuklear(ctx);
@@ -129,8 +131,8 @@ class MenuScene final : public Scene {
           nk_spacer(ctx);
           break;
         case ProgramState::SCREEN_CONTROL:
-          nk_layout_row_dynamic(ctx, width_y - 20, 2);
-          float height = width_y - 60;
+          nk_layout_row_dynamic(ctx, 235, 2);
+          float height = 200;
 
           ctx->style.window.fixed_background =
               nk_style_item_color({255, 255, 255, 200});
@@ -145,14 +147,12 @@ class MenuScene final : public Scene {
             nk_layout_row_dynamic(ctx, keyboard_height, 1);
             nk_image(ctx, keyboard);
 
-            nk_layout_row_dynamic(ctx, height - keyboard_height - 60, 1);
+            nk_layout_row_dynamic(ctx, (height - keyboard_height) - 60, 1);
 
             nk_label(ctx,
                      "WASD lateral & JL rotational \nQ for field vs robot "
-                     "releative\nE to reset field forward\nNote: Scores cannot "
-                     "be submited to "
-                     "\nleaderboards.",
-                     NK_TEXT_LEFT);
+                     "releative\nE to reset field forward",
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_LEFT);
 
             nk_layout_row_dynamic(ctx, 50, 1);
             if (nk_button_label(ctx, "Pick")) {
@@ -168,16 +168,35 @@ class MenuScene final : public Scene {
             nk_layout_row_dynamic(ctx, joystick_height, 1);
             nk_image(ctx, joystick);
 
-            nk_layout_row_dynamic(ctx, height - joystick_height - 60, 1);
+            nk_layout_row_dynamic(ctx, (height - joystick_height) - 60, 1);
+
             nk_label(ctx,
-                     "Joystick for movement\nTwist to turn\nButton 12 to "
-                     "toggle field vs robot relative\nButton 6 to "
+                     "Joystick for movement. Twist to turn\nButton 12 to "
+                     "toggle positioning\nButton 6 to "
                      "reset field forward",
-                     NK_TEXT_LEFT);
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_LEFT);
 
             nk_layout_row_dynamic(ctx, 50, 1);
             if (nk_button_label(ctx, "Pick")) {
               state.input = INPUT_JOYSTICK;
+              state.screen = ProgramState::SCREEN_GAME;
+            }
+            nk_group_end(ctx);
+          }
+
+          if (nk_group_begin(ctx, "Touch", NK_WINDOW_BACKGROUND)) {
+            float joystick_height = ((float)joystick.h / joystick.w) *
+                                    nk_layout_space_bounds(ctx).w;
+            nk_layout_row_dynamic(ctx, joystick_height, 1);
+            nk_image(ctx, joystick);
+
+            nk_layout_row_dynamic(ctx, height - joystick_height - 60, 1);
+            nk_label(ctx, "Thumbs to move and rotate.",
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_LEFT);
+
+            nk_layout_row_dynamic(ctx, 50, 1);
+            if (nk_button_label(ctx, "Pick")) {
+              state.input = INPUT_TOUCH;
               state.screen = ProgramState::SCREEN_GAME;
             }
 

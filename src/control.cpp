@@ -1,5 +1,8 @@
 #include "control.h"
 
+#include "raylib.h"
+#include "raymath.h"
+
 void GamepadControlProxy::step(InputMethod method) {
   last_gamepad_inputs = gamepad_inputs;
   last_gamepad_axis = gamepad_axis;
@@ -52,6 +55,63 @@ void GamepadControlProxy::step(InputMethod method) {
 #ifdef PLATFORM_WEB
       joystick_axis[2] += joystick_axis[5];
 #endif  // PLATFORM_WEB
+      break;
+    case INPUT_TOUCH:
+      auto joystick_x = GetScreenWidth() / 4;
+      auto joystick_y = GetScreenHeight() - 200;
+
+      auto twist_x = (GetScreenWidth() * 3) / 4;
+      auto twist_y = GetScreenHeight() - 200;
+
+      auto divider = GetScreenWidth() / 2;
+
+      Vector2 lateral_control = Vector2Zero();
+      Vector2 rotational_control = Vector2Zero();
+
+      for (int i = GetTouchPointCount() - 1; i >= 0; i--) {
+        auto pos = GetTouchPosition(i);
+        if (pos.x < divider) {
+          lateral_control =
+              Vector2{(pos.x - joystick_x) / 100, (pos.y - joystick_y) / 100};
+          if (Vector2Length(lateral_control) > 1) {
+            lateral_control = Vector2Normalize(lateral_control);
+          }
+        }
+
+        if (pos.x > divider) {
+          rotational_control =
+              Vector2{(pos.x - twist_x) / 100, (pos.y - twist_y) / 100};
+          if (Vector2Length(rotational_control) > 1) {
+            rotational_control = Vector2Normalize(rotational_control);
+          }
+        }
+      }
+      joystick_axis[0] = lateral_control.x;
+      joystick_axis[1] = lateral_control.y;
+      joystick_axis[2] = rotational_control.x;
+
+      break;
+  }
+}
+
+void GamepadControlProxy::draw(InputMethod method) {
+  switch (method) {
+    default:
+      break;
+    case INPUT_TOUCH:
+      auto joystick_x = GetScreenWidth() / 4;
+      auto joystick_y = GetScreenHeight() - 200;
+      DrawCircle(joystick_x, joystick_y, 100, Fade(WHITE, 0.5));
+
+      auto twist_x = (GetScreenWidth() * 3) / 4;
+      auto twist_y = GetScreenHeight() - 200;
+      DrawCircle(twist_x, twist_y, 100, Fade(WHITE, 0.5));
+
+      DrawCircle(joystick_x + joystick_axis[0] * 100,
+                 joystick_y + joystick_axis[1] * 100, 50, Fade(BLACK, 0.5));
+
+      DrawCircle(twist_x + joystick_axis[2] * 100, twist_y, 50,
+                 Fade(BLACK, 0.5));
       break;
   }
 }
