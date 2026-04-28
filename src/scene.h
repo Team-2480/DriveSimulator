@@ -1,11 +1,12 @@
 #pragma once
 
-#include <optional>
 #if defined(PLATFORM_WEB)
 #include <emscripten/emscripten.h>
 #endif
 
 #include <Jolt/Jolt.h>
+
+#include "debugrenderer.h"
 // jolt must be first
 
 #include <Jolt/Core/Factory.h>
@@ -25,6 +26,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 
 #include "config.h"
 #include "control.h"
@@ -68,6 +70,8 @@ class GameScene final : public Scene {
   bool paused = false;
   Shader& shader;
   Camera3D camera;
+
+  RaylibDebugRenderer renderer;
 
   float speed_modifier = 1;  // slowmode stuff
 

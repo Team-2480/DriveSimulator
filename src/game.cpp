@@ -1,11 +1,27 @@
+#include "Jolt/Jolt.h"
+#include "debugrenderer.h"
+// on top
+
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+
 #include <cstdio>
 
+#include "Jolt/Physics/Collision/Shape/BoxShape.h"
+#include "Jolt/Physics/Collision/Shape/CompoundShape.h"
+#include "Jolt/Physics/Collision/Shape/Shape.h"
+#include "Jolt/Physics/Collision/Shape/SphereShape.h"
+#include "Jolt/Physics/Collision/Shape/StaticCompoundShape.h"
+#include "Jolt/RegisterTypes.h"
+#include "config.h"
 #include "control.h"
+#include "jolt.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "scene.h"
+#include "swerve.h"
+
 GameScene::GameScene(ProgramState& program_state, Shader& shader)
-    : Scene(program_state), shader(shader), jolt(shader) {
+    : Scene(program_state), shader(shader), jolt(shader), renderer(&camera) {
   time_trials = true;  // delete this later and make a function to enable time
                        // trials ingame
 
@@ -21,7 +37,7 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
     model.materials[i].shader = shader;
   }
 
-  sphere_model = LoadModelFromMesh(GenMeshSphere(0.15f, 20, 20));
+  sphere_model = LoadModelFromMesh(GenMeshSphere(0.15f / 2, 20, 20));
   for (int i = 0; i < sphere_model.materialCount; i++) {
     sphere_model.materials[i].shader = shader;
   }
@@ -30,18 +46,36 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
     player_model.materials[i].shader = shader;
   }
 
+  /*
+  #ifdef JPH_DEBUG_RENDERER
+    JPH::BodyManager::DrawSettings settings;
+    settings.mDrawShapeWireframe = true;
+    jolt.physics_system.DrawBodies(settings, &renderer);
+  #endif
+  */
+
   /// sphere stuff
   for (size_t i = 0; i < 100; i++) {
     jolt.make_ball();
   }
 
-  JPH::BodyCreationSettings player_settings(
+  JPH::StaticCompoundShapeSettings* compound_shape =
+      new JPH::StaticCompoundShapeSettings;
+  for (auto module : modules_positions) {
+    compound_shape->AddShape(JPH::RVec3(module.x, 0.0, module.y),
+                             JPH::QuatArg::sIdentity(),
+                             new JPH::SphereShapeSettings(0.1));
+  }
 
-      new JPH::BoxShape(JPH::RVec3(Constants::ROBOT_SIZE.x / 2,
-                                   Constants::ROBOT_SIZE.y / 2,
-                                   Constants::ROBOT_SIZE.z / 2)),
-      JPH::RVec3(0, 1, 0), JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
-      Layers::MOVING);
+  compound_shape->AddShape(
+      JPH::RVec3(0.0, 5, 0.0), JPH::QuatArg::sIdentity(),
+
+      new JPH::BoxShapeSettings(JPH::RVec3(Constants::ROBOT_SIZE.x / 2,
+                                           Constants::ROBOT_SIZE.y / 2,
+                                           Constants::ROBOT_SIZE.z / 2)));
+  JPH::BodyCreationSettings player_settings(
+      compound_shape, JPH::RVec3(0, 1, 0), JPH::Quat::sIdentity(),
+      JPH::EMotionType::Dynamic, Layers::MOVING);
 
   JPH::MassProperties msp;
   msp.mMass = 30;
@@ -306,6 +340,7 @@ void GameScene::game_draw() {
   else
     DrawModel(jolt.convex_model, {}, 1.0f, WHITE);
 
+  renderer.NextFrame();
   EndShaderMode();
   EndMode3D();
   EndBlendMode();

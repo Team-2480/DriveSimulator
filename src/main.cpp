@@ -1,3 +1,6 @@
+#include "scene.h"
+// on top
+
 #include <cinttypes>
 #include <memory>
 
@@ -6,7 +9,6 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "rcamera.h"
-#include "scene.h"
 
 class MenuScene final : public Scene {
  private:

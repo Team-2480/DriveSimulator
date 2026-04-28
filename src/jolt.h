@@ -98,7 +98,7 @@ class MyBodyActivationListener : public JPH::BodyActivationListener {
   virtual void OnBodyDeactivated(const JPH::BodyID&, JPH::uint64) override {}
 };
 
-class JoltWrapper {
+class JoltWrapper final {
  public:
   JPH::PhysicsSystem physics_system;
   JPH::TempAllocatorImpl temp_allocator;

@@ -25,6 +25,11 @@ endif()
 target_compile_options(bagelsim PRIVATE -Wall -Wextra -Wpedantic -Wuninitialized)
 target_link_options(bagelsim PRIVATE -Wall -Wextra -Wpedantic -Wuninitialized)
 
+add_compile_definitions(JPH_DEBUG_RENDERER)
+set(CPP_RTTI_ENABLED On)
+set(DEBUG_RENDERER_IN_DEBUG_AND_RELEASE On)
+set(DEBUG_RENDERER_IN_DISTRIBUTION On)
+
 set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -ggdb")
 set(CMAKE_C_FLAGS_DEBUG  "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -ggdb")
 

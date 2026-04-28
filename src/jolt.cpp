@@ -11,6 +11,7 @@ void JoltWrapper::init() {
   JPH::RegisterTypes();
 }
 void JoltWrapper::free() { JPH::UnregisterTypes(); }
+
 JoltWrapper::JoltWrapper(Shader& shader)
     : temp_allocator(10 * 1024 * 1024),
       job_system(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers,
@@ -85,7 +86,7 @@ void JoltWrapper::update() {
 void JoltWrapper::make_ball() {
   JPH::EOverrideMassProperties::MassAndInertiaProvided;
   JPH::BodyCreationSettings sphere_settings(
-      new JPH::SphereShape(0.15f),
+      new JPH::SphereShape(0.15f / 2),
       JPH::RVec3((float)(rand() % 10000) / 10000 * 8 - 4.0_r, 2.0_r,
                  (float)(rand() % 10000) / 10000 * 4 - 2.0_r),
       JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, Layers::MOVING);
