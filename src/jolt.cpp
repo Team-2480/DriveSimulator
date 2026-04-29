@@ -10,6 +10,7 @@ void JoltWrapper::init() {
   JPH::Factory::sInstance = new JPH::Factory();
   JPH::RegisterTypes();
 }
+
 void JoltWrapper::free() { JPH::UnregisterTypes(); }
 JoltWrapper::JoltWrapper(Shader& shader)
     : temp_allocator(10 * 1024 * 1024),

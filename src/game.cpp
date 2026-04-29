@@ -532,7 +532,7 @@ void GameScene::game_draw() {
         TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
                    player_pos.GetY(), player_pos.GetZ()),
         10, 40, 20, ORANGE);
-  } else if (debug && state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+  } else if (debug) {
     DrawFPS(10, 70);
 
     DrawText(  // displaying coordinates of the robot on the field
