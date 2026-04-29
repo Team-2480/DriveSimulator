@@ -45,7 +45,8 @@ struct ProgramState {
     SCREEN_CONTROL,
     SCREEN_GAME_MODE,
     SCREEN_GAME,
-    SCREEN_SCORE_SUBMIT
+    SCREEN_SCORE_SUBMIT,
+    SCREEN_TRIAL_SELECT
   } screen = SCREEN_MAIN_MENU;
 
   enum GameMode {
@@ -54,30 +55,41 @@ struct ProgramState {
     GAMEMODE_SANDBOX,
   } gamemode = GAMEMODE_SANDBOX;
 
+  enum TimeTrial {
+    TRIAL_LOOP,
+    TRIAL_EIGHT
+  } time_trial_selected;
   InputMethod input = INPUT_KEYBOARD;
 };
 
 class Scene {
- protected:
-  ProgramState& state;
+protected:
+  ProgramState &state;
 
- public:
-  Scene(ProgramState& state) : state(state) {}
+public:
+  // time trials stuff that needed to be public
+  void selectTimeTrial(enum::ProgramState::TimeTrial time_trial_id) {
+    state.time_trial_selected = time_trial_id;
+    state.gamemode = ProgramState::GAMEMODE_ARCADE_TIME;
+    state.screen = ProgramState::SCREEN_GAME;
+    printf("time trial selected: %d\n", state.time_trial_selected);
+  }
+  Scene(ProgramState &state) : state(state) {}
   ~Scene() {}
 
   void virtual step() {}
   void virtual draw() {}
 
- private:
+private:
 };
 
 class GameScene final : public Scene {
- private:
+private:
   bool paused = false;
-  Shader& shader;
+  Shader &shader;
   Camera3D camera;
 
-  float speed_modifier = 1;  // slowmode stuff
+  float speed_modifier = 1; // slowmode stuff
 
   // score submut
   char submit_nametag[6] = "NAME\0";
@@ -88,17 +100,25 @@ class GameScene final : public Scene {
   bool submit_email_changed = false;
 
   // time trials
-  float time_trial_selected = 0;
-  float time_trial_target = 0;
+  float time_trial_target;
   float tt_target_dist;
-  std::vector<JPH::Vec3> tt_teleport_location = {{0, 0.1, 3.2}};
-  std::vector<float> tt_teleport_rotation = {270};
+  std::vector<JPH::Vec3> tt_teleport_location = {{0, 0.1, 3.2}, {0, 0.1, 3.2}};
+  std::vector<float> tt_teleport_rotation = {270, 270};
   std::vector<std::vector<Vector3>> time_trials{
-      {{5.87, 0, 2.68},  // time_trials[0] is the loop around the field
+      // time_trials[0] is the loop around the field
+      {{5.87, 0, 2.68},   // bottom right
+       {5.87, 0, -2.68},  // top right
+       {-5.87, 0, -2.68}, // top left
+       {-5.87, 0, 2.68},
+       {5.87, 0, 2.68}}, // bottom left
+
+      {{5.87, 0, 2.68},
        {5.87, 0, -2.68},
+       {0, 0, 0},
+       {-5.87, 0, 2.68},
        {-5.87, 0, -2.68},
-       {-5.87, 0, 2.68}},
-  };
+       {0, 0, 0},
+       {5.87, 0, 2.68}}};
   // (for robot position) field domain is [-7.83, 7.83], field range is
   // [-3.57, 3.57]
   float start_time = GetTime();
@@ -126,7 +146,7 @@ class GameScene final : public Scene {
   bool debug = false;
 
   Font font;
-  nk_context* ctx;
+  nk_context *ctx;
 
   Mesh player_cube =
       GenMeshCube(Constants::ROBOT_SIZE.x, Constants::ROBOT_SIZE.y,
@@ -136,8 +156,8 @@ class GameScene final : public Scene {
   Vector3 player_velocity;
   float player_rot_velocity;
 
- public:
-  GameScene(ProgramState& program_state, Shader& shader);
+public:
+  GameScene(ProgramState &program_state, Shader &shader);
   ~GameScene() {
     UnloadModel(wheel_model);
     UnloadModel(model);
@@ -153,7 +173,7 @@ class GameScene final : public Scene {
   void draw() override;
   void game_draw();
 
- private:
+private:
   std::array<Camera, 4> camera_perspectives = {
 
       Camera3D{
@@ -185,4 +205,3 @@ class GameScene final : public Scene {
           .projection = CAMERA_PERSPECTIVE,
       }};
 };
-

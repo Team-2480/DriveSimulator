@@ -18,14 +18,14 @@
 #include "raymath.h"
 #include "scene.h"
 
-GameScene::GameScene(ProgramState& program_state, Shader& shader)
+GameScene::GameScene(ProgramState &program_state, Shader &shader)
     : Scene(program_state), shader(shader), jolt(shader) {
-  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
+  camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
   camera.up =
-      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;            // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
+      Vector3{0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
+  camera.fovy = 90.0f;           // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
 
   model = LoadModel(RELEASE_FOLDER("map.glb"));
   for (int i = 0; i < model.materialCount; i++) {
@@ -93,20 +93,22 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   ctx = InitNuklearEx(font, font_size);
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+    // printf("time trial selected: %d\n", state.time_trial_selected);
     start_time = GetTime();
-    time_trial_selected = 0;
     time_trial_target = 0;
     jolt.get_interface().SetPositionAndRotation(
-        player_id, JPH::RVec3Arg(tt_teleport_location[time_trial_selected]),
+        player_id, JPH::RVec3Arg(tt_teleport_location[state.time_trial_selected]),
         JPH::QuatArg::sEulerAngles(JPH::Vec3(
-            0, tt_teleport_rotation[time_trial_selected] * DEG2RAD, 0)),
+            0, tt_teleport_rotation[state.time_trial_selected] * DEG2RAD, 0)),
         JPH::EActivation::Activate);
   }
 }
 
-NK_API nk_bool nk_filter_caps(const struct nk_text_edit* box, nk_rune unicode) {
-  if (unicode >= '0' && unicode <= '9') return nk_true;
-  if (unicode >= 'A' && unicode <= 'Z') return nk_true;
+NK_API nk_bool nk_filter_caps(const struct nk_text_edit *box, nk_rune unicode) {
+  if (unicode >= '0' && unicode <= '9')
+    return nk_true;
+  if (unicode >= 'A' && unicode <= 'Z')
+    return nk_true;
 
   return nk_false;
 }
@@ -506,19 +508,18 @@ void GameScene::game_draw() {
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
     tt_target_dist = Vector3Distance(
         {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()},
-        time_trials[time_trial_selected][time_trial_target]);
-    DrawCylinder(time_trials[time_trial_selected][time_trial_target], 0.8, 0.8,
+        time_trials[state.time_trial_selected][time_trial_target]);
+    DrawCylinder(time_trials[state.time_trial_selected][time_trial_target], 0.8, 0.8,
                  0.1, 15, GREEN);
     if (tt_target_dist < 0.7 &&
-        time_trial_target != time_trials[time_trial_selected].size() - 1) {
+        time_trial_target != time_trials[state.time_trial_selected].size() - 1) {
       time_trial_target++;
     } else if (tt_target_dist < 0.7 &&
                time_trial_target ==
-                   time_trials[time_trial_selected].size() - 1) {
+                   time_trials[state.time_trial_selected].size() - 1) {
       state.screen = ProgramState::SCREEN_SCORE_SUBMIT;
-      printf("Completed Trial with a time of %.2f seconds\n",
-             GetTime() - start_time);
-      // will add a visual thing later and more stuff
+      // printf("Completed Trial with a time of %.2f seconds\n", GetTime() -
+      // start_time); will add a visual thing later and more stuff
     }
   }
   EndMode3D();
@@ -527,23 +528,23 @@ void GameScene::game_draw() {
   if (debug && state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
     DrawFPS(10, 10);
 
-    DrawText(  // displaying coordinates of the robot on the field
+    DrawText( // displaying coordinates of the robot on the field
         TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
                    player_pos.GetY(), player_pos.GetZ()),
         10, 40, 20, ORANGE);
   } else if (debug && state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
     DrawFPS(10, 70);
 
-    DrawText(  // displaying coordinates of the robot on the field
+    DrawText( // displaying coordinates of the robot on the field
         TextFormat("X: %f, Z: %f\n", player_pos.GetX(), player_pos.GetZ()), 10,
         100, 20, ORANGE);
   }
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-    DrawText(  // displaying the timer for the time trials
+    DrawText( // displaying the timer for the time trials
         TextFormat("Time: %.2f", ((GetTime() - start_time))), 10, 10, 20,
         SKYBLUE);
-    DrawText(  // displaying the timer for the time trials
+    DrawText( // displaying the timer for the time trials
         TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 40, 20,
         ORANGE);
   }
