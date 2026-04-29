@@ -100,13 +100,15 @@ void JoltWrapper::make_ball(float x, float y) {
   get_interface().SetLinearAndAngularVelocity(
       sphere_id, JPH::Vec3(0.0f, 0.0f, 0.0f), JPH::RVec3(0.0_r, 0.0f, 0.0f));
   get_interface().SetFriction(sphere_id, 0.1);
-  balls.push_back(sphere_id);
+  balls[sphere_id] = true;
 }
 std::vector<Vector3> JoltWrapper::get_ball_positions() {
   std::vector<Vector3> ret;
   for (auto ball : balls) {
-    JPH::RVec3 position = get_interface().GetCenterOfMassPosition(ball);
-    ret.push_back({position.GetX(), position.GetY(), position.GetZ()});
+    if (ball.second) {
+      JPH::RVec3 position = get_interface().GetCenterOfMassPosition(ball.first);
+      ret.push_back({position.GetX(), position.GetY() + 1, position.GetZ()});
+    }
   }
   return ret;
 }

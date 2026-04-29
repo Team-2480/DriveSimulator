@@ -17,6 +17,8 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 
+#include <unordered_map>
+
 using namespace JPH::literals;
 
 namespace Layers {
@@ -125,7 +127,7 @@ class JoltWrapper {
   JPH::BodyInterface& get_interface();
   void update();
 
-  std::vector<JPH::BodyID> balls;
+  std::unordered_map<JPH::BodyID, bool> balls;
 
   void make_ball(float x, float y);
 

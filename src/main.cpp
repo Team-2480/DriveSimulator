@@ -17,6 +17,9 @@ class MenuScene final : public Scene {
   struct nk_image logo;
   struct nk_image keyboard;
   struct nk_image joystick;
+  struct nk_image touch;
+  struct nk_image shovel;
+  struct nk_image play;
 
   Camera ui_camera{
       .position = Vector3{0.0f, -5.0f, 10.0f},
@@ -44,6 +47,9 @@ class MenuScene final : public Scene {
     logo = LoadNuklearImage(RELEASE_FOLDER("logo.png"));
     keyboard = LoadNuklearImage(RELEASE_FOLDER("keyboard.png"));
     joystick = LoadNuklearImage(RELEASE_FOLDER("3dpro.png"));
+    touch = LoadNuklearImage(RELEASE_FOLDER("mobile.png"));
+    shovel = LoadNuklearImage(RELEASE_FOLDER("shovel.png"));
+    play = LoadNuklearImage(RELEASE_FOLDER("play.png"));
 
     map_model = LoadModel(RELEASE_FOLDER("map.glb"));
     for (int i = 0; i < map_model.materialCount; i++) {
@@ -96,7 +102,7 @@ class MenuScene final : public Scene {
     float center_x = GetScreenWidth() / 2.0f;
     float width_x = std::min(700, GetScreenWidth());
     float center_y = GetScreenHeight() / 2.0f;
-    float width_y = std::min(500, GetScreenHeight());
+    float width_y = std::min(700, GetScreenHeight());
 
     float aspect_ratio = (float)logo.h / logo.w;
 
@@ -130,17 +136,20 @@ class MenuScene final : public Scene {
           }
           nk_spacer(ctx);
           break;
-        case ProgramState::SCREEN_CONTROL:
-          nk_layout_row_dynamic(ctx, 235, 2);
-          float height = 200;
+        case ProgramState::SCREEN_CONTROL: {
+          nk_layout_row_dynamic(ctx, 250, 2);
+          float height = 210;
 
           ctx->style.window.fixed_background =
-              nk_style_item_color({255, 255, 255, 200});
+              nk_style_item_color({0, 0, 0, 50});
           ctx->style.window.rounding = 20;
+          ctx->style.window.group_border = 2;
+          ctx->style.window.group_border_color = {255, 255, 255, 255};
           ctx->style.window.group_padding = {20, 20};
-          ctx->style.text.color = {50, 50, 50, 255};
+          ctx->style.text.color = {255, 255, 255, 255};
 
-          if (nk_group_begin(ctx, "Keyboard", NK_WINDOW_BACKGROUND)) {
+          if (nk_group_begin(ctx, "Keyboard",
+                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
             float keyboard_height = ((float)keyboard.h / keyboard.w) *
                                     nk_layout_space_bounds(ctx).w;
 
@@ -152,17 +161,18 @@ class MenuScene final : public Scene {
             nk_label(ctx,
                      "WASD lateral & JL rotational \nQ for field vs robot "
                      "releative\nE to reset field forward",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_LEFT);
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
 
             nk_layout_row_dynamic(ctx, 50, 1);
             if (nk_button_label(ctx, "Pick")) {
               state.input = INPUT_KEYBOARD;
-              state.screen = ProgramState::SCREEN_GAME;
+              state.screen = ProgramState::SCREEN_GAME_MODE;
             }
             nk_group_end(ctx);
           }
 
-          if (nk_group_begin(ctx, "Joystick", NK_WINDOW_BACKGROUND)) {
+          if (nk_group_begin(ctx, "Joystick",
+                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
             float joystick_height = ((float)joystick.h / joystick.w) *
                                     nk_layout_space_bounds(ctx).w;
             nk_layout_row_dynamic(ctx, joystick_height, 1);
@@ -174,36 +184,95 @@ class MenuScene final : public Scene {
                      "Joystick for movement. Twist to turn\nButton 12 to "
                      "toggle positioning\nButton 6 to "
                      "reset field forward",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_LEFT);
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
 
             nk_layout_row_dynamic(ctx, 50, 1);
             if (nk_button_label(ctx, "Pick")) {
               state.input = INPUT_JOYSTICK;
-              state.screen = ProgramState::SCREEN_GAME;
+              state.screen = ProgramState::SCREEN_GAME_MODE;
             }
             nk_group_end(ctx);
           }
 
-          if (nk_group_begin(ctx, "Touch", NK_WINDOW_BACKGROUND)) {
-            float joystick_height = ((float)joystick.h / joystick.w) *
-                                    nk_layout_space_bounds(ctx).w;
-            nk_layout_row_dynamic(ctx, joystick_height, 1);
-            nk_image(ctx, joystick);
+          if (nk_group_begin(ctx, "Touch",
+                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+            float touch_height = ((float)joystick.h / joystick.w) *
+                                 nk_layout_space_bounds(ctx).w;
+            nk_layout_row_dynamic(ctx, touch_height, 1);
+            nk_image(ctx, touch);
 
-            nk_layout_row_dynamic(ctx, height - joystick_height - 60, 1);
+            nk_layout_row_dynamic(ctx, height - touch_height - 60, 1);
             nk_label(ctx, "Thumbs to move and rotate.",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_LEFT);
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
 
             nk_layout_row_dynamic(ctx, 50, 1);
             if (nk_button_label(ctx, "Pick")) {
               state.input = INPUT_TOUCH;
-              state.screen = ProgramState::SCREEN_GAME;
+              state.screen = ProgramState::SCREEN_GAME_MODE;
             }
 
             nk_group_end(ctx);
           }
 
           break;
+        }
+        case ProgramState::SCREEN_GAME_MODE: {
+          nk_layout_row_dynamic(ctx, 250, 2);
+          float height = 210;
+
+          ctx->style.window.fixed_background =
+              nk_style_item_color({0, 0, 0, 50});
+          ctx->style.window.rounding = 20;
+          ctx->style.window.group_border = 2;
+          ctx->style.window.group_border_color = {255, 255, 255, 255};
+          ctx->style.window.group_padding = {20, 20};
+          ctx->style.text.color = {255, 255, 255, 255};
+
+          if (nk_group_begin(ctx, "Sandbox Mode",
+                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+            float play_height = ((float)keyboard.h / keyboard.w) *
+                                    nk_layout_space_bounds(ctx).w;
+
+            nk_layout_row_dynamic(ctx, play_height, 1);
+            nk_image(ctx, play);
+
+            nk_layout_row_dynamic(ctx, (height - play_height) - 60, 1);
+
+            nk_label(ctx, "Freeplay! No score just bliss.",
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+            nk_layout_row_dynamic(ctx, 50, 1);
+            if (nk_button_label(ctx, "Pick")) {
+              state.gamemode = ProgramState::GAMEMODE_SANDBOX;
+              state.screen = ProgramState::SCREEN_GAME;
+            }
+            nk_group_end(ctx);
+          }
+
+          if (nk_group_begin(ctx, "Shovel Mode",
+                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+            float shovel_height = ((float)shovel.h / shovel.w) *
+                                    nk_layout_space_bounds(ctx).w;
+            nk_layout_row_dynamic(ctx, shovel_height, 1);
+            nk_image(ctx, shovel);
+
+            nk_layout_row_dynamic(ctx, (height - shovel_height) - 60, 1);
+
+            nk_label(ctx,
+                     "Shovel the most fuel in 1 minute\nto the human player "
+                     "station.",
+                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+            nk_layout_row_dynamic(ctx, 50, 1);
+            if (nk_button_label(ctx, "Pick")) {
+              state.gamemode = ProgramState::GAMEMODE_ARCADE_SHOVEL;
+              state.screen = ProgramState::SCREEN_GAME;
+            }
+            nk_group_end(ctx);
+          }
+
+          break;
+        }
       }
     }
     nk_end(ctx);

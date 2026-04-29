@@ -43,8 +43,14 @@ struct ProgramState {
     SCREEN_QUIT,
     SCREEN_MAIN_MENU,
     SCREEN_CONTROL,
+    SCREEN_GAME_MODE,
     SCREEN_GAME
   } screen = SCREEN_MAIN_MENU;
+
+  enum GameMode {
+    GAMEMODE_ARCADE_SHOVEL,
+    GAMEMODE_SANDBOX,
+  } gamemode = GAMEMODE_SANDBOX;
 
   InputMethod input = INPUT_KEYBOARD;
 };

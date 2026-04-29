@@ -1,5 +1,12 @@
+#include "Jolt/Jolt.h"
+// on top
+
 #include <cstdio>
 
+#include "Jolt/Math/Real.h"
+#include "Jolt/Math/Vec3.h"
+#include "Jolt/Physics/EActivation.h"
+#include "config.h"
 #include "control.h"
 #include "raylib.h"
 #include "raymath.h"
@@ -40,12 +47,20 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
     }
   }
 
+  auto robot_start_pos = JPH::RVec3(0, 4, 0);
+
+  if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+    camera_index = 3;
+    robot_start_pos = JPH::RVec3(5, Constants::ROBOT_SIZE.y * 2, -2);
+    default_rot = PI / 2;
+  }
+
   JPH::BodyCreationSettings player_settings(
       new JPH::BoxShape(JPH::RVec3(Constants::ROBOT_SIZE.x / 2,
                                    Constants::ROBOT_SIZE.y / 2,
                                    Constants::ROBOT_SIZE.z / 2)),
-      JPH::RVec3(0, 1, 0), JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
-      Layers::MOVING);
+      robot_start_pos, JPH::Quat::sEulerAngles(JPH::Vec3(0.0, PI / 2, 0.0)),
+      JPH::EMotionType::Dynamic, Layers::MOVING);
 
   JPH::MassProperties msp;
   msp.mMass = 30;
@@ -122,6 +137,7 @@ void GameScene::game_step() {
   float angle;
   player_rot.GetAxisAngle(axis, angle);
 
+  // if (state.gamemode == ProgramState::GAMEMODE_SANDBOX) {
   if (IsKeyPressed(KEY_ONE)) {
     camera_index = 0;
   } else if (IsKeyPressed(KEY_TWO)) {
@@ -135,6 +151,7 @@ void GameScene::game_step() {
   } else if (IsKeyPressed(KEY_ZERO)) {
     camera_index = 10;
   }
+  //}
 
   if (camera_index < camera_perspectives.size()) {
     camera_perspectives[camera_index].target = Vector3Lerp(
@@ -158,6 +175,7 @@ void GameScene::game_step() {
     };
   }
 
+  // if (state.gamemode == ProgramState::GAMEMODE_SANDBOX) {
   if (camera_index == 11) {
     UpdateCamera(&camera, CAMERA_FREE);
   } else {
@@ -171,6 +189,7 @@ void GameScene::game_step() {
   if (IsKeyPressed(KEY_P)) {
     debug = !debug;
   }
+  //}
 
   player_velocity = Vector3Zero();
   player_rot_velocity = 0;
@@ -204,7 +223,8 @@ void GameScene::game_step() {
     global_local = !global_local;
   }
 
-  if (controller_info.joystick_inputs[11]) {
+  if (controller_info.joystick_inputs[11] &&
+      state.gamemode != ProgramState::GAMEMODE_ARCADE_SHOVEL) {
     default_rot = angle;
   }
 
@@ -224,6 +244,19 @@ void GameScene::game_step() {
       JPH::Vec3{-player_rot.GetX() * 1,
                 player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
                 -player_rot.GetZ() * 1});
+
+  if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+    for (auto ball : jolt.balls) {
+      JPH::RVec3 position =
+          jolt.get_interface().GetCenterOfMassPosition(ball.first);
+      if (position.GetX() > 7.5 && position.GetZ() < -2) {
+        jolt.balls[ball.first] = false;
+        jolt.get_interface().DeactivateBody(ball.first);
+        jolt.get_interface().SetPosition(ball.first, JPH::Vec3(0, 10, 0),
+                                         JPH::EActivation::DontActivate);
+      }
+    }
+  }
 }
 void GameScene::draw() {
   game_draw();
@@ -300,9 +333,14 @@ void GameScene::game_draw() {
     rlPopMatrix();
   }
 
-  auto balls = jolt.get_ball_positions();
-  for (auto ball : balls) {
-    DrawModel(sphere_model, ball, 1.0f, YELLOW);
+  for (auto ball : jolt.balls) {
+    JPH::RVec3 position =
+        jolt.get_interface().GetCenterOfMassPosition(ball.first);
+    if (ball.second) {
+      DrawModel(sphere_model,
+                {position.GetX(), position.GetY(), position.GetZ()}, 1.0f,
+                YELLOW);
+    }
   }
 
   if (!debug)
