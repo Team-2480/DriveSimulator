@@ -66,7 +66,7 @@ class GameScene final : public Scene {
 
   float speed_modifier = 1;  // slowmode stuff
 
-  bool time_trials = false;
+  bool time_trials_enabled = false;
   float start_time = GetTime();
   JPH::BodyID player_id;
 

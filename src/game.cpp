@@ -1,15 +1,25 @@
+#include "Jolt/Jolt.h"
+// jolt stay
+#include "Jolt/Math/MathTypes.h"
+#include "Jolt/Math/Quat.h"
+#include "Jolt/Math/Real.h"
+#include "Jolt/Math/Vec3.h"
+#include "Jolt/Physics/EActivation.h"
+#include "raylib.h"
+#include "raymath.h"
 #include "scene.h"
-GameScene::GameScene(ProgramState& program_state, Shader& shader)
+#include <cstddef>
+#include <cstdio>
+#include <vector>
+GameScene::GameScene(ProgramState &program_state, Shader &shader)
     : Scene(program_state), shader(shader), jolt(shader) {
-  time_trials = true;  // delete this later and make a function to enable time
-                       // trials ingame
 
-  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
+  camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
   camera.up =
-      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;            // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
+      Vector3{0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
+  camera.fovy = 90.0f;           // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
 
   model = LoadModel(RELEASE_FOLDER("map.glb"));
   for (int i = 0; i < model.materialCount; i++) {
@@ -56,6 +66,23 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
 
   jolt.physics_system.OptimizeBroadPhase();
 }
+
+bool time_trials_enabled =
+    false; // delete this later and make a function to enable time trials ingame
+float time_trial_selected = 0;
+float time_trial_target = 0;
+float tt_target_dist;
+std::vector<JPH::Vec3> tt_teleport_location = {{0, 0.1, 3.2}};
+std::vector<float> tt_teleport_rotation = {270};
+std::vector<std::vector<Vector3>> time_trials{
+    {{5.87, 0, 2.68}, // time_trials[0] is the loop around the field
+     {5.87, 0, -2.68},
+     {-5.87, 0, -2.68},
+     {-5.87, 0, 2.68}},
+};
+// (for robot position) field domain is [-7.83, 7.83], field range is
+// [-3.57, 3.57]
+
 void GameScene::step() {
   controller_info.step();
   jolt.update();
@@ -68,16 +95,22 @@ void GameScene::step() {
 
   if (IsKeyPressed(KEY_ONE)) {
     camera_index = 0;
+    EnableCursor();
   } else if (IsKeyPressed(KEY_TWO)) {
     camera_index = 1;
+    EnableCursor();
   } else if (IsKeyPressed(KEY_THREE)) {
     camera_index = 2;
+    EnableCursor();
   } else if (IsKeyPressed(KEY_FOUR)) {
     camera_index = 3;
+    EnableCursor();
   } else if (IsKeyPressed(KEY_NINE)) {
     camera_index = 11;
+    DisableCursor();
   } else if (IsKeyPressed(KEY_ZERO)) {
     camera_index = 10;
+    EnableCursor();
   }
 
   if (camera_index < camera_perspectives.size()) {
@@ -100,9 +133,9 @@ void GameScene::step() {
 
   if (camera_index == 11) {
     UpdateCamera(&camera, CAMERA_FREE);
-    controller_info.keyboard_overide = false;
+    // controller_info.keyboard_overide = false;
   } else {
-    controller_info.keyboard_overide = true;
+    // controller_info.keyboard_overide = true;
   }
 
   if (IsKeyDown(KEY_LEFT_SHIFT) && camera_index == 11) {
@@ -161,8 +194,8 @@ void GameScene::draw() {
 
   if (std::abs(controller_info.joystick_axis[2]) >
       Constants::CONTROLER_DEADBAND) {
-    player_rot_velocity -=
-        std::pow(controller_info.joystick_axis[2], 3.0) * 3 * speed_modifier;
+    player_rot_velocity -= std::pow(controller_info.joystick_axis[2], 3.0) * 3 *
+                           speed_modifier * 4;
   }
 
   if (controller_info.joystick_inputs[4] &&
@@ -244,23 +277,62 @@ void GameScene::draw() {
   }
 
   EndShaderMode();
+
+  if (time_trials_enabled) {
+    tt_target_dist = Vector3Distance(
+        {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()},
+        time_trials[time_trial_selected][time_trial_target]);
+    DrawCylinder(time_trials[time_trial_selected][time_trial_target], 0.8, 0.8,
+                 0.1, 15, GREEN);
+    if (tt_target_dist < 0.7 &&
+        time_trial_target != time_trials[time_trial_selected].size() - 1) {
+      time_trial_target++;
+    } else if (tt_target_dist < 0.7 &&
+               time_trial_target ==
+                   time_trials[time_trial_selected].size() - 1) {
+      time_trials_enabled = false;
+      printf("Completed Trial with a time of %.2f seconds\n",
+             GetTime() - start_time);
+      // will add a visual thing later and more stuff
+    }
+  }
   EndMode3D();
 
-  if (debug) {
+  if (debug && time_trials_enabled == false) {
     DrawFPS(10, 10);
 
-    DrawText(  // displaying coordinates of the robot on the field
+    DrawText( // displaying coordinates of the robot on the field
+        TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
+                   player_pos.GetY(), player_pos.GetZ()),
+        10, 40, 20, ORANGE);
+  } else if (debug && time_trials_enabled == true) {
+    DrawFPS(10, 70);
+
+    DrawText( // displaying coordinates of the robot on the field
         TextFormat("X: %f, Z: %f\n", player_pos.GetX(), player_pos.GetZ()), 10,
-        420, 20, ORANGE);
+        100, 20, ORANGE);
   }
 
   if (IsKeyPressed(KEY_T)) {
-    start_time = GetTime();
+    time_trials_enabled = !time_trials_enabled;
+    if (time_trials_enabled) {
+      start_time = GetTime();
+      time_trial_selected = 0;
+      time_trial_target = 0;
+      jolt.get_interface().SetPositionAndRotation(
+          player_id, JPH::RVec3Arg(tt_teleport_location[time_trial_selected]),
+          JPH::QuatArg::sEulerAngles(JPH::Vec3(
+              0, tt_teleport_rotation[time_trial_selected] * DEG2RAD, 0)),
+          JPH::EActivation::Activate);
+    }
   }
 
-  if (time_trials) {
-    DrawText(  // displaying the timer for the time trials
-        TextFormat("Time: %.2f", ((GetTime() - start_time))), 10, 40, 20,
+  if (time_trials_enabled) {
+    DrawText( // displaying the timer for the time trials
+        TextFormat("Time: %.2f", ((GetTime() - start_time))), 10, 10, 20,
         SKYBLUE);
+    DrawText( // displaying the timer for the time trials
+        TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 40, 20,
+        ORANGE);
   }
 }

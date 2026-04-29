@@ -13,7 +13,7 @@ class GamepadControlProxy {
 
   void step();
 
-  bool keyboard_overide = false;
+  bool keyboard_overide = true;
 
   bool has_gamepad = false;
   std::map<size_t, bool> gamepad_inputs;

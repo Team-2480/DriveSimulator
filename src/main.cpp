@@ -4,11 +4,11 @@
 #include "scene.h"
 
 class MenuScene final : public Scene {
- private:
-  struct nk_context* ctx;
+private:
+  struct nk_context *ctx;
   Font font;
   Model map_model;
-  Shader& shader;
+  Shader &shader;
   Camera camera{
       .position = Vector3{0.0f, 4.0f, 10.0f},
       .target = Vector3{0.0f, 0.0f, 0.0f},
@@ -17,8 +17,8 @@ class MenuScene final : public Scene {
       .projection = CAMERA_PERSPECTIVE,
   };
 
- public:
-  MenuScene(ProgramState& program_state, Shader& shader)
+public:
+  MenuScene(ProgramState &program_state, Shader &shader)
       : Scene(program_state), shader(shader) {
     int font_size = 16;
     font = LoadFont((Constants::release_folder + "Lato-Regular.ttf").c_str());
@@ -90,10 +90,10 @@ static Light lights[MAX_LIGHTS];
 static Shader shader;
 
 class SceneManager {
- private:
+private:
   ProgramState state;
 
- public:
+public:
   SceneManager() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
     InitWindow(screenWidth, screenHeight, "BagelSim");
@@ -125,18 +125,18 @@ class SceneManager {
     }
     UnloadShader(shader);
   }
-  std::optional<GameScene*> game_scene = std::nullopt;
-  std::optional<MenuScene*> menu_scene = std::nullopt;
-  std::optional<Scene*> scene = std::nullopt;
+  std::optional<GameScene *> game_scene = std::nullopt;
+  std::optional<MenuScene *> menu_scene = std::nullopt;
+  std::optional<Scene *> scene = std::nullopt;
 
   void step() {
     switch (state.screen) {
-      case ProgramState::SCREEN_MAIN_MENU:
-        scene = static_cast<Scene*>(menu_scene.value());
-        break;
-      case ProgramState::SCREEN_GAME:
-        scene = static_cast<Scene*>(game_scene.value());
-        break;
+    case ProgramState::SCREEN_MAIN_MENU:
+      scene = static_cast<Scene *>(menu_scene.value());
+      break;
+    case ProgramState::SCREEN_GAME:
+      scene = static_cast<Scene *>(game_scene.value());
+      break;
     }
     if (scene.has_value()) {
       scene.value()->step();
@@ -151,12 +151,12 @@ class SceneManager {
     EndDrawing();
   }
 
- private:
+private:
   const int screenWidth = 800;
   const int screenHeight = 450;
 };
 
-static SceneManager* manager;
+static SceneManager *manager;
 
 void step() { manager->step(); }
 
