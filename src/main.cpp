@@ -392,27 +392,6 @@ public:
 
   bool step() {
     switch (state.screen) {
-<<<<<<< HEAD
-    case ProgramState::SCREEN_GAME_MODE:
-      [[fallthrough]];
-    case ProgramState::SCREEN_CONTROL:
-      [[fallthrough]];
-    case ProgramState::SCREEN_MAIN_MENU:
-      if (game_scene.has_value()) {
-        game_scene = {};
-      }
-      scene = std::static_pointer_cast<Scene>(menu_scene.value());
-      break;
-    case ProgramState::SCREEN_GAME:
-      if (!game_scene.has_value()) {
-        game_scene = std::make_unique<GameScene>(state, shader);
-      }
-      scene = std::static_pointer_cast<Scene>(game_scene.value());
-      break;
-    case ProgramState::SCREEN_QUIT:
-      return false;
-      break;
-=======
       case ProgramState::SCREEN_GAME_MODE:
         [[fallthrough]];
       case ProgramState::SCREEN_CONTROL:
@@ -434,7 +413,6 @@ public:
       case ProgramState::SCREEN_QUIT:
         return false;
         break;
->>>>>>> 5e5a0f059b020155264f160dd94a31d343f5856e
     }
     if (scene.has_value()) {
       scene.value()->step();
