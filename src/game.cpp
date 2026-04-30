@@ -528,7 +528,7 @@ void GameScene::game_draw() {
         {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()},
         time_trials[state.time_trial_selected][time_trial_target]);
     DrawCylinder(time_trials[state.time_trial_selected][time_trial_target], 0.8,
-                 0.8, 0.1, 15, GREEN);
+                 0.8, 0.1, 20, GREEN);
     if (tt_target_dist < 0.8 &&
         time_trial_target !=
             time_trials[state.time_trial_selected].size() - 1) {
@@ -544,7 +544,7 @@ void GameScene::game_draw() {
   EndMode3D();
   EndBlendMode();
 
-  if (debug && state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+  if (debug) {
     DrawFPS(10, 10);
 
     DrawText( // displaying coordinates of the robot on the field
