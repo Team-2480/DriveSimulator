@@ -1,7 +1,6 @@
 #pragma once
 
 #include <optional>
-#include <sys/_types/_size_t.h>
 #if defined(PLATFORM_WEB)
 #include <emscripten/emscripten.h>
 #endif
@@ -99,7 +98,6 @@ private:
 
   // time trials
   float time_trials_stopwatch;
-  float time_trials_leaderboard_time;
   float time_trial_target;
   float tt_target_dist;
   std::vector<JPH::Vec3> tt_teleport_location = {{0, 0.1, 3.2}, {0, 0.1, 3.2}};
