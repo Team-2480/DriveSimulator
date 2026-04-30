@@ -25,8 +25,12 @@ endif()
 target_compile_options(bagelsim PRIVATE -Wall -Wextra -Wpedantic -Wuninitialized)
 target_link_options(bagelsim PRIVATE -Wall -Wextra -Wpedantic -Wuninitialized)
 
-set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -ggdb")
-set(CMAKE_C_FLAGS_DEBUG  "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -ggdb")
+set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -g -pthread -sSHARED_MEMORY")
+set(CMAKE_C_FLAGS_DEBUG  "${CMAKE_C_FLAGS_DEBUG} -g -pthread -sSHARED_MEMORY")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -pthread -sSHARED_MEMORY")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -pthread -sSHARED_MEMORY")
+set(CMAKE_CXX_FLAGS_DISTRIBUTION "${CMAKE_CXX_FLAGS_DISTRIBUTION} -O3 -pthread -sSHARED_MEMORY")
+set(CMAKE_CXX_FLAGS_DISTRIBUTION  "${CMAKE_CXX_FLAGS_DISTRIBUTION} -O3 -pthread -sSHARED_MEMORY")
 
 include(FetchContent)
 
@@ -56,6 +60,7 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(raylib-nuklear)
+
 
 
 target_link_libraries(bagelsim PUBLIC raylib glfw Jolt Eigen3::Eigen raylib_nuklear)
