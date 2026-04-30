@@ -172,7 +172,7 @@ public:
           nk_layout_row_dynamic(ctx, 50, 1);
           if (nk_button_label(ctx, "Pick")) {
             state.input = INPUT_KEYBOARD;
-            state.screen = ProgramState::SCREEN_GAME_MODE;            
+            state.screen = ProgramState::SCREEN_GAME_MODE;
           }
           nk_group_end(ctx);
         }
@@ -340,6 +340,12 @@ public:
           selectTimeTrial(ProgramState::TRIAL_EIGHT);
         }
         nk_spacer(ctx);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Back")) {
+          state.screen = ProgramState::SCREEN_GAME_MODE;
+        }
+        nk_spacer(ctx);
         break;
       }
     }
@@ -392,27 +398,27 @@ public:
 
   bool step() {
     switch (state.screen) {
-      case ProgramState::SCREEN_GAME_MODE:
-        [[fallthrough]];
-      case ProgramState::SCREEN_CONTROL:
-        [[fallthrough]];
-      case ProgramState::SCREEN_MAIN_MENU:
-        if (game_scene.has_value()) {
-          game_scene = {};
-        }
-        scene = std::static_pointer_cast<Scene>(menu_scene.value());
-        break;
-      case ProgramState::SCREEN_SCORE_SUBMIT:
-        [[fallthrough]];
-      case ProgramState::SCREEN_GAME:
-        if (!game_scene.has_value()) {
-          game_scene = std::make_unique<GameScene>(state, shader);
-        }
-        scene = std::static_pointer_cast<Scene>(game_scene.value());
-        break;
-      case ProgramState::SCREEN_QUIT:
-        return false;
-        break;
+    case ProgramState::SCREEN_GAME_MODE:
+      [[fallthrough]];
+    case ProgramState::SCREEN_CONTROL:
+      [[fallthrough]];
+    case ProgramState::SCREEN_MAIN_MENU:
+      if (game_scene.has_value()) {
+        game_scene = {};
+      }
+      scene = std::static_pointer_cast<Scene>(menu_scene.value());
+      break;
+    case ProgramState::SCREEN_SCORE_SUBMIT:
+      [[fallthrough]];
+    case ProgramState::SCREEN_GAME:
+      if (!game_scene.has_value()) {
+        game_scene = std::make_unique<GameScene>(state, shader);
+      }
+      scene = std::static_pointer_cast<Scene>(game_scene.value());
+      break;
+    case ProgramState::SCREEN_QUIT:
+      return false;
+      break;
     }
     if (scene.has_value()) {
       scene.value()->step();

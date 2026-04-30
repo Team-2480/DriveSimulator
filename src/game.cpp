@@ -97,7 +97,8 @@ GameScene::GameScene(ProgramState &program_state, Shader &shader)
     start_time = GetTime();
     time_trial_target = 0;
     jolt.get_interface().SetPositionAndRotation(
-        player_id, JPH::RVec3Arg(tt_teleport_location[state.time_trial_selected]),
+        player_id,
+        JPH::RVec3Arg(tt_teleport_location[state.time_trial_selected]),
         JPH::QuatArg::sEulerAngles(JPH::Vec3(
             0, tt_teleport_rotation[state.time_trial_selected] * DEG2RAD, 0)),
         JPH::EActivation::Activate);
@@ -186,7 +187,7 @@ void GameScene::step() {
             std::format("You scored an {} on Shovel.", shovel_score).c_str(),
             NK_TEXT_CENTERED);
       } else if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-        nk_label(ctx, std::format("You scored an ... on Time Trials.").c_str(),
+        nk_label(ctx, std::format("You completed the trial in %f seconds", time_trials_leaderboard_time).c_str(),
                  NK_TEXT_CENTERED);
       }
 
@@ -510,17 +511,19 @@ void GameScene::game_draw() {
     tt_target_dist = Vector3Distance(
         {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()},
         time_trials[state.time_trial_selected][time_trial_target]);
-    DrawCylinder(time_trials[state.time_trial_selected][time_trial_target], 0.8, 0.8,
-                 0.1, 15, GREEN);
-    if (tt_target_dist < 0.7 &&
-        time_trial_target != time_trials[state.time_trial_selected].size() - 1) {
+    DrawCylinder(time_trials[state.time_trial_selected][time_trial_target], 0.8,
+                 0.8, 0.1, 15, GREEN);
+    if (tt_target_dist < 0.8 &&
+        time_trial_target !=
+            time_trials[state.time_trial_selected].size() - 1) {
       time_trial_target++;
-    } else if (tt_target_dist < 0.7 &&
+    } else if (tt_target_dist < 0.8 &&
                time_trial_target ==
                    time_trials[state.time_trial_selected].size() - 1) {
       state.screen = ProgramState::SCREEN_SCORE_SUBMIT;
-      // printf("Completed Trial with a time of %.2f seconds\n", GetTime() -
-      // start_time); will add a visual thing later and more stuff
+      time_trials_leaderboard_time = std::round(((GetTime() - start_time) * 100) / 100);
+      printf("Completed Trial with a time of %.2f seconds\n", GetTime() - start_time);
+      state.gamemode = ProgramState::GAMEMODE_SANDBOX;
     }
   }
   EndMode3D();

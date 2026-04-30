@@ -91,13 +91,15 @@ private:
 
   float speed_modifier = 1; // slowmode stuff
 
-  // score submut
+  // score submit
   char submit_nametag[6] = "NAME\0";
   bool submit_nametag_changed = false;
   char submit_number[6] = "00000";
   bool submit_number_changed = false;
   char submit_email[256] = "name@domain.com";
   bool submit_email_changed = false;
+
+  float time_trials_leaderboard_time;
 
   // time trials
   float time_trial_target;
