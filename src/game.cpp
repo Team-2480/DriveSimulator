@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <format>
+#include <string>
 #include <vector>
 
 #include "Jolt/Math/MathTypes.h"
@@ -94,6 +95,7 @@ GameScene::GameScene(ProgramState &program_state, Shader &shader)
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
     // printf("time trial selected: %d\n", state.time_trial_selected);
+    camera_index = state.time_trial_selected;
     start_time = GetTime();
     time_trial_target = 0;
     jolt.get_interface().SetPositionAndRotation(
@@ -537,7 +539,8 @@ void GameScene::game_draw() {
                time_trial_target ==
                    time_trials[state.time_trial_selected].size() - 1) {
       state.screen = ProgramState::SCREEN_SCORE_SUBMIT;
-      /* printf("Completed Trial with a time of %.2f seconds\n", time_trials_stopwatch); */
+      /* printf("Completed Trial with a time of %.2f seconds\n",
+       * time_trials_stopwatch); */
       state.gamemode = ProgramState::GAMEMODE_SANDBOX;
     }
   }
@@ -547,16 +550,26 @@ void GameScene::game_draw() {
   if (debug) {
     DrawFPS(10, 10);
 
-    DrawText( // displaying coordinates of the robot on the field
-        TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
-                   player_pos.GetY(), player_pos.GetZ()),
-        10, 40, 20, ORANGE);
-    if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-      DrawText( // displaying the timer for the time trials
-          TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
-          ORANGE);
+    if (IsKeyPressed(KEY_N)) {
+      printf("{%f, 0, %f}\n", player_pos.GetX(),
+             player_pos.GetZ());
+      trial_creation += "{" + std::to_string(player_pos.GetX()) + ", " +
+                        std::to_string(player_pos.GetY()) + ", " +
+                        std::to_string(player_pos.GetZ()) + "}, ";
     }
-  }
+    if (IsKeyPressed(KEY_V)) {
+      printf("%s\n", trial_creation.c_str());
+    }
+      DrawText( // displaying coordinates of the robot on the field
+          TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
+                     player_pos.GetY(), player_pos.GetZ()),
+          10, 40, 20, ORANGE);
+      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+        DrawText( // displaying the timer for the time trials
+            TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
+            ORANGE);
+      }
+    }
 
-  controller_info.draw(state.input);
-}
+    controller_info.draw(state.input);
+  }
