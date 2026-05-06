@@ -61,9 +61,10 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(raylib-nuklear)
 
+include(sqlite.cmake)
 
 
-target_link_libraries(bagelsim PUBLIC raylib glfw Jolt Eigen3::Eigen raylib_nuklear)
+target_link_libraries(bagelsim PUBLIC raylib glfw Jolt Eigen3::Eigen raylib_nuklear SQLite3)
 
 target_compile_definitions(bagelsim PRIVATE GIT_HASH="${GIT_HASH}" NK_BUTTON_TRIGGER_ON_RELEASE)
 

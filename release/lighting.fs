@@ -27,12 +27,17 @@ struct Light {
 };
 
 // Input lighting values
-uniform Light lights[MAX_LIGHTS];
 uniform vec4 ambient;
 uniform vec3 viewPos;
 
 void main()
 {
+    Light lights[MAX_LIGHTS]; 
+    lights[0] = Light(1, 1, vec3(0, 4, -4), vec3(0.0), vec4(0.2));
+    lights[1] = Light(1, 1, vec3(0, 4, 4), vec3(0.0), vec4(0.2));
+    lights[2] = Light(1, 1, vec3(-10, 4, 0), vec3(0.0), vec4(0.2));
+    lights[3] = Light(1, 1, vec3(10, 4, 0), vec3(0.0), vec4(0.2));
+
     // Texel color fetching from texture sampler
     vec4 texelColor = texture2D(texture0, fragTexCoord);
     vec3 lightDot = vec3(0.0);

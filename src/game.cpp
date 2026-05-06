@@ -19,14 +19,14 @@
 #include "raymath.h"
 #include "scene.h"
 
-GameScene::GameScene(ProgramState &program_state, Shader &shader)
+GameScene::GameScene(ProgramState& program_state, Shader& shader)
     : Scene(program_state), shader(shader), jolt(shader) {
-  camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
+  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
   camera.up =
-      Vector3{0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;           // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
+      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
+  camera.fovy = 90.0f;            // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
 
   model = LoadModel(RELEASE_FOLDER("map.glb"));
   for (int i = 0; i < model.materialCount; i++) {
@@ -107,11 +107,9 @@ GameScene::GameScene(ProgramState &program_state, Shader &shader)
   }
 }
 
-NK_API nk_bool nk_filter_caps(const struct nk_text_edit *box, nk_rune unicode) {
-  if (unicode >= '0' && unicode <= '9')
-    return nk_true;
-  if (unicode >= 'A' && unicode <= 'Z')
-    return nk_true;
+NK_API nk_bool nk_filter_caps(const struct nk_text_edit* box, nk_rune unicode) {
+  if (unicode >= '0' && unicode <= '9') return nk_true;
+  if (unicode >= 'A' && unicode <= 'Z') return nk_true;
 
   return nk_false;
 }
@@ -188,10 +186,7 @@ void GameScene::step() {
             ctx,
             std::format("You scored an {} on Shovel.", shovel_score).c_str(),
             NK_TEXT_CENTERED);
-      } else if (state.gamemode ==
-                 ProgramState::GAMEMODE_SANDBOX) { // Time Trial Completion
-        // has to check for sandbox as I change it to that when you finish a
-        // time trial
+      } else if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
         nk_label(ctx,
                  std::format("You completed the trial in {:.2f} seconds",
                              time_trials_stopwatch)
@@ -220,7 +215,7 @@ void GameScene::step() {
       }
 
       nk_layout_row_dynamic(ctx, 50, 1);
-      nk_label(ctx, "Optional & Not Displayed Email", NK_TEXT_CENTERED);
+      nk_label(ctx, "Not for display purposes:", NK_TEXT_CENTERED);
       nk_flags email_event =
           nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, submit_email,
                                          sizeof(submit_email), nk_filter_ascii);
@@ -236,8 +231,33 @@ void GameScene::step() {
         nk_widget_disable_begin(ctx);
       }
 
+      std::string score = "---";
+      std::string mode = "---";
+
+      // NOTICE: bump these version numbers if you update the game
+      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+        score = std::format("{}", shovel_score);
+        mode = "shovel-v1";
+      } else if (state.gamemode ==
+                 ProgramState::GAMEMODE_ARCADE_TIME) {  // Time Trial Completion
+        score = std::format("{:.2f}", time_trials_stopwatch);
+        mode = "time-trial-v1";
+      }
+
       if (nk_button_label(ctx, "Submit")) {
-        state.screen = ProgramState::SCREEN_MAIN_MENU;
+        char* query = sqlite3_mprintf(
+            "REPLACE INTO leaderboard VALUES ('%q', '%q', '%q', '%q', '%q');",
+            submit_nametag, submit_number, std::format("{}", score).c_str(),
+            mode.c_str(), submit_email);
+
+        char* err_msg;
+        if (sqlite3_exec(state.db, query, NULL, NULL, &err_msg) != SQLITE_OK) {
+          printf("%s\n", err_msg);
+          sqlite3_free(err_msg);
+        }
+        sqlite3_free(query);
+
+        state.screen = ProgramState::SCREEN_LEADERBOARD;
       }
 
       if (!submit_nametag_changed || !submit_number_changed) {
@@ -399,6 +419,8 @@ void GameScene::game_step() {
                                          JPH::EActivation::DontActivate);
       }
     }
+  } else if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+    time_trials_stopwatch = GetTime() - start_time;
   }
 }
 void GameScene::draw() {
@@ -419,7 +441,6 @@ void GameScene::draw() {
                30, 1.0, WHITE);
   }
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-    time_trials_stopwatch = GetTime() - start_time;
     auto time_str =
         std::format("{:02.0f}:{:02.0f}", std::roundf(time_trials_stopwatch),
                     std::fmod((time_trials_stopwatch), 1.0) * 100);
