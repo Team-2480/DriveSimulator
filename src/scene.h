@@ -46,7 +46,8 @@ struct ProgramState {
     SCREEN_GAME_MODE,
     SCREEN_GAME,
     SCREEN_SCORE_SUBMIT,
-    SCREEN_TRIAL_SELECT
+    SCREEN_TRIAL_SELECT,
+    SCREEN_LEADERBOARD
   } screen = SCREEN_MAIN_MENU;
 
   enum GameMode {
@@ -60,10 +61,10 @@ struct ProgramState {
 };
 
 class Scene {
-protected:
-  ProgramState &state;
+ protected:
+  ProgramState& state;
 
-public:
+ public:
   // time trials stuff that needed to be public
   void selectTimeTrial(enum ::ProgramState::TimeTrial time_trial_id) {
     state.time_trial_selected = time_trial_id;
@@ -71,22 +72,22 @@ public:
     state.screen = ProgramState::SCREEN_GAME;
     printf("time trial selected: %d\n", state.time_trial_selected);
   }
-  Scene(ProgramState &state) : state(state) {}
+  Scene(ProgramState& state) : state(state) {}
   ~Scene() {}
 
   void virtual step() {}
   void virtual draw() {}
 
-private:
+ private:
 };
 
 class GameScene final : public Scene {
-private:
+ private:
   bool paused = false;
-  Shader &shader;
+  Shader& shader;
   Camera3D camera;
 
-  float speed_modifier = 1; // slowmode stuff
+  float speed_modifier = 1;  // slowmode stuff
 
   // score submit
   char submit_nametag[6] = "NAME\0";
@@ -104,11 +105,11 @@ private:
   std::vector<float> tt_teleport_rotation = {270, 270};
   std::vector<std::vector<Vector3>> time_trials{
       // time_trials[0] is the loop around the field
-      {{5.87, 0, 2.68},   // bottom right
-       {5.87, 0, -2.68},  // top right
-       {-5.87, 0, -2.68}, // top left
+      {{5.87, 0, 2.68},    // bottom right
+       {5.87, 0, -2.68},   // top right
+       {-5.87, 0, -2.68},  // top left
        {-5.87, 0, 2.68},
-       {5.87, 0, 2.68}}, // bottom left
+       {5.87, 0, 2.68}},  // bottom left
 
       {{5.87, 0, 2.68},
        {5.87, 0, -2.68},
@@ -144,7 +145,7 @@ private:
   bool debug = false;
 
   Font font;
-  nk_context *ctx;
+  nk_context* ctx;
 
   Mesh player_cube =
       GenMeshCube(Constants::ROBOT_SIZE.x, Constants::ROBOT_SIZE.y,
@@ -154,8 +155,8 @@ private:
   Vector3 player_velocity;
   float player_rot_velocity;
 
-public:
-  GameScene(ProgramState &program_state, Shader &shader);
+ public:
+  GameScene(ProgramState& program_state, Shader& shader);
   ~GameScene() {
     UnloadModel(wheel_model);
     UnloadModel(model);
@@ -173,7 +174,7 @@ public:
   void draw() override;
   void game_draw();
 
-private:
+ private:
   std::array<Camera, 4> camera_perspectives = {
 
       Camera3D{
