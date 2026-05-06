@@ -1,6 +1,8 @@
 #pragma once
 
 #include <optional>
+
+#include "sqlite3.h"
 #if defined(PLATFORM_WEB)
 #include <emscripten/emscripten.h>
 #endif
@@ -58,6 +60,8 @@ struct ProgramState {
 
   enum TimeTrial { TRIAL_LOOP, TRIAL_EIGHT } time_trial_selected;
   InputMethod input = INPUT_KEYBOARD;
+
+  sqlite3* db;
 };
 
 class Scene {

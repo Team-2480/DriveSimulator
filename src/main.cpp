@@ -1,6 +1,8 @@
 #include <cinttypes>
 #include <cstdio>
+#include <cstring>
 #include <memory>
+#include <vector>
 
 #include "config.h"
 #include "control.h"
@@ -382,17 +384,53 @@ class MenuScene final : public Scene {
 
           if (nk_group_begin(ctx, "Leaderboard",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            nk_layout_row_dynamic(ctx, 50, 1);
+            nk_layout_row_dynamic(ctx, 50, 2);
 
-            nk_label(ctx, "Leaderboard",
+            nk_label(ctx, "Leaderboards for: ",
                      NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-            nk_layout_row_dynamic(ctx, 50, 3);
+
+            static const char* gamemode_options[] = {"time-trial-v1",
+                                                     "shovel-v1"};
+            static int selected_item_index = 0;
+            struct nk_vec2 size = {100, 100};
+            nk_combobox(ctx, gamemode_options, 2, &selected_item_index, 20,
+                        size);
+            query = std::format(
+                "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
+                "DESC LIMIT 10",
+                gamemode_options[selected_item_index]);
+
+            nk_layout_row_dynamic(ctx, 35, 3);
+
+            nk_label(ctx, "NAME", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+            nk_label(ctx, "TEAM", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+            nk_label(ctx, "SCORE", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
 
             for (size_t i = 0; i < 10; i++) {
-              nk_label(ctx, "---", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-              nk_label(ctx, "0000", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-              nk_label(ctx, "0", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+              if (i < leaderboard_cache.size()) {
+                nk_label(ctx, std::get<0>(leaderboard_cache[i]).c_str(),
+                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+                nk_label(ctx, std::get<1>(leaderboard_cache[i]).c_str(),
+                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+                nk_label(ctx, std::get<2>(leaderboard_cache[i]).c_str(),
+                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+              } else {
+                nk_label(ctx, "---",
+                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+                nk_label(ctx, "---",
+                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+                nk_label(ctx, "---",
+                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+              }
             }
+
+            nk_layout_row_dynamic(ctx, 50, 3);
+
+            nk_spacer(ctx);
+            if (nk_button_label(ctx, "Home")) {
+              state.screen = ProgramState::SCREEN_MAIN_MENU;
+            }
+            nk_spacer(ctx);
 
             nk_group_end(ctx);
           }
@@ -404,7 +442,51 @@ class MenuScene final : public Scene {
     nk_end(ctx);
 
     CameraYaw(&camera, -0.1 * DEG2RAD, true);
+
+    if ((last_screen != state.screen &&
+         state.screen == ProgramState::SCREEN_LEADERBOARD) ||
+        last_query != query) {
+      last_query = query;
+      leaderboard_cache.clear();
+      char* err_msg;
+      if (sqlite3_exec(state.db, query.c_str(), sqlite_leaderboard_callback,
+                       (void*)this, &err_msg) != SQLITE_OK) {
+        printf("%s\n", err_msg);
+        sqlite3_free(err_msg);
+      }
+    }
+    last_screen = state.screen;
   }
+
+  static int sqlite_leaderboard_callback(void* data, int argc, char** argv,
+                                         char** az_col_name) {
+    MenuScene* usable_data = (MenuScene*)data;
+
+    std::string tag = "---";
+    std::string team = "---";
+    std::string score = "---";
+    for (int i = 0; i < argc; i++) {
+      if (!argv[i]) {
+        continue;
+      }
+      if (strcmp(az_col_name[i], "tag") == 0) {
+        tag = argv[i];
+      } else if (strcmp(az_col_name[i], "team") == 0) {
+        team = argv[i];
+      } else if (strcmp(az_col_name[i], "score") == 0) {
+        score = argv[i];
+      }
+    }
+    usable_data->leaderboard_cache.push_back({tag, team, score});
+
+    return 0;
+  }
+
+  std::string last_query;
+  std::string query;
+  ProgramState::ProgramScreen last_screen;
+  std::vector<std::tuple<std::string, std::string, std::string>>
+      leaderboard_cache;
 };
 
 static Light lights[MAX_LIGHTS];
@@ -417,6 +499,7 @@ class SceneManager {
 
  public:
   SceneManager(sqlite3* leadboard_db) : db(leadboard_db) {
+    state.db = db;
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED |
                    FLAG_MSAA_4X_HINT);
     InitWindow(screenWidth, screenHeight, "BagelSim");
@@ -427,6 +510,14 @@ class SceneManager {
 
     shader = LoadShader(RELEASE_FOLDER("lighting.vs"),
                         RELEASE_FOLDER("lighting.fs"));
+
+    shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
+
+    int ambient_loc = GetShaderLocation(shader, "ambient");
+    float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
+    SetShaderValue(shader, ambient_loc, ambient_lighting, SHADER_UNIFORM_VEC4);
+
+
 #ifdef PLATFORM_WEB
     SetTraceLogLevel(LOG_ERROR);
 #endif
@@ -448,6 +539,7 @@ class SceneManager {
 	"\"tag\"	TEXT NOT NULL UNIQUE COLLATE NOCASE, "
 	"\"team\"	TEXT, "
 	"\"score\"	NUMERIC NOT NULL, "
+	"\"mode\"	TEXT, "
 	"\"email\"	TEXT, "
 	"PRIMARY KEY(\"tag\")"
 ");",
@@ -527,21 +619,6 @@ int main() {
   }
 
   manager = new SceneManager(db);
-
-  shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
-
-  int ambient_loc = GetShaderLocation(shader, "ambient");
-  float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
-  SetShaderValue(shader, ambient_loc, ambient_lighting, SHADER_UNIFORM_VEC4);
-
-  lights[0] = CreateLight(LIGHT_POINT, Vector3{0, 4, -4}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader, 0);
-  lights[1] = CreateLight(LIGHT_POINT, Vector3{0, 4, 4}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader, 1);
-  lights[2] = CreateLight(LIGHT_POINT, Vector3{-10, 4, 0}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader, 2);
-  lights[3] = CreateLight(LIGHT_POINT, Vector3{10, 4, 0}, Vector3Zero(),
-                          Color{50, 50, 50, 50}, shader, 3);
 
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(step_void, 0, 1);
