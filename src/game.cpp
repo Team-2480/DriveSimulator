@@ -19,14 +19,14 @@
 #include "raymath.h"
 #include "scene.h"
 
-GameScene::GameScene(ProgramState& program_state, Shader& shader)
+GameScene::GameScene(ProgramState &program_state, Shader &shader)
     : Scene(program_state), shader(shader), jolt(shader) {
-  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
+  camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
   camera.up =
-      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;            // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
+      Vector3{0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
+  camera.fovy = 90.0f;           // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
 
   model = LoadModel(RELEASE_FOLDER("map.glb"));
   for (int i = 0; i < model.materialCount; i++) {
@@ -81,10 +81,15 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   jolt.get_interface().SetMaxAngularVelocity(player_id, 5);
   jolt.get_interface().SetFriction(player_id, 2);
 
+  trial_target_mesh = GenMeshCylinder(0.8, 10, 20);
+  trial_target_model = LoadModelFromMesh(trial_target_mesh);
   wheel_mesh = GenMeshCylinder(0.1, 0.1, 10);
   wheel_model = LoadModelFromMesh(wheel_mesh);
   for (int i = 0; i < wheel_model.materialCount; i++) {
     wheel_model.materials[i].shader = shader;
+  }
+  for (int i = 0; i < trial_target_model.materialCount; i++) {
+    trial_target_model.materials[i].shader = gradient;
   }
 
   jolt.physics_system.OptimizeBroadPhase();
@@ -95,7 +100,10 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
     // printf("time trial selected: %d\n", state.time_trial_selected);
-    camera_index = state.time_trial_selected;
+    camera_index = tt_camera_angle[state.time_trial_selected];
+    if (camera_index >= 1 && camera_index <= 3) {
+      default_rot = PI / 2;
+    }
     start_time = GetTime();
     time_trial_target = 0;
     jolt.get_interface().SetPositionAndRotation(
@@ -107,9 +115,11 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   }
 }
 
-NK_API nk_bool nk_filter_caps(const struct nk_text_edit* box, nk_rune unicode) {
-  if (unicode >= '0' && unicode <= '9') return nk_true;
-  if (unicode >= 'A' && unicode <= 'Z') return nk_true;
+NK_API nk_bool nk_filter_caps(const struct nk_text_edit *box, nk_rune unicode) {
+  if (unicode >= '0' && unicode <= '9')
+    return nk_true;
+  if (unicode >= 'A' && unicode <= 'Z')
+    return nk_true;
 
   return nk_false;
 }
@@ -120,9 +130,8 @@ void GameScene::step() {
       paused = !paused;
     }
 
-    game_step();
-
     if (!paused) {
+      game_step();
       if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
         shovel_time_remaining -= 1.0 / 30.0;
         if (shovel_time_remaining < 0.0) {
@@ -149,11 +158,16 @@ void GameScene::step() {
         nk_layout_row_dynamic(ctx, 50, 1);
         nk_spacer(ctx);
         nk_layout_row_dynamic(ctx, 50, 3);
-
         nk_spacer(ctx);
-        if (nk_button_label(ctx, "Return To Home")) {
+        if (nk_button_label(ctx, "Return to Game")) {
+          paused = false;
+        }
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Exit to Menu")) {
           state.screen = ProgramState::SCREEN_MAIN_MENU;
         }
+        nk_spacer(ctx);
       }
       nk_end(ctx);
     }
@@ -239,18 +253,18 @@ void GameScene::step() {
         score = std::format("{}", shovel_score);
         mode = "shovel-v1";
       } else if (state.gamemode ==
-                 ProgramState::GAMEMODE_ARCADE_TIME) {  // Time Trial Completion
+                 ProgramState::GAMEMODE_ARCADE_TIME) { // Time Trial Completion
         score = std::format("{:.2f}", time_trials_stopwatch);
         mode = "time-trial-v1";
       }
 
       if (nk_button_label(ctx, "Submit")) {
-        char* query = sqlite3_mprintf(
+        char *query = sqlite3_mprintf(
             "REPLACE INTO leaderboard VALUES ('%q', '%q', '%q', '%q', '%q');",
             submit_nametag, submit_number, std::format("{}", score).c_str(),
             mode.c_str(), submit_email);
 
-        char* err_msg;
+        char *err_msg;
         if (sqlite3_exec(state.db, query, NULL, NULL, &err_msg) != SQLITE_OK) {
           printf("%s\n", err_msg);
           sqlite3_free(err_msg);
@@ -537,21 +551,23 @@ void GameScene::game_draw() {
                 YELLOW);
     }
   }
-
   if (!debug)
     DrawModel(model, {}, 1.0f, WHITE);
   else
     DrawModel(jolt.convex_model, {}, 1.0f, WHITE);
 
   EndShaderMode();
-
+  BeginShaderMode(gradient);
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME &&
       state.screen == ProgramState::SCREEN_GAME) {
     tt_target_dist = Vector3Distance(
         {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()},
         time_trials[state.time_trial_selected][time_trial_target]);
-    DrawCylinder(time_trials[state.time_trial_selected][time_trial_target], 0.8,
-                 0.8, 0.1, 20, GREEN);
+    DrawModel(trial_target_model,
+              time_trials[state.time_trial_selected][time_trial_target], 1,
+              WHITE);
+    // DrawCylinder(time_trials[state.time_trial_selected][time_trial_target],
+    // 0.8, 0.8, 10, 20, CLITERAL(Color){0, 228, 48, 155});
     if (tt_target_dist < 0.8 &&
         time_trial_target !=
             time_trials[state.time_trial_selected].size() - 1) {
@@ -562,9 +578,10 @@ void GameScene::game_draw() {
       state.screen = ProgramState::SCREEN_SCORE_SUBMIT;
       /* printf("Completed Trial with a time of %.2f seconds\n",
        * time_trials_stopwatch); */
-      state.gamemode = ProgramState::GAMEMODE_SANDBOX;
+      // state.gamemode = ProgramState::GAMEMODE_SANDBOX;
     }
   }
+  EndShaderMode();
   EndMode3D();
   EndBlendMode();
 
@@ -572,8 +589,7 @@ void GameScene::game_draw() {
     DrawFPS(10, 10);
 
     if (IsKeyPressed(KEY_N)) {
-      printf("{%f, 0, %f}\n", player_pos.GetX(),
-             player_pos.GetZ());
+      printf("{%f, 0, %f}\n", player_pos.GetX(), player_pos.GetZ());
       trial_creation += "{" + std::to_string(player_pos.GetX()) + ", " +
                         std::to_string(player_pos.GetY()) + ", " +
                         std::to_string(player_pos.GetZ()) + "}, ";
@@ -581,16 +597,16 @@ void GameScene::game_draw() {
     if (IsKeyPressed(KEY_V)) {
       printf("%s\n", trial_creation.c_str());
     }
-      DrawText( // displaying coordinates of the robot on the field
-          TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
-                     player_pos.GetY(), player_pos.GetZ()),
-          10, 40, 20, ORANGE);
-      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-        DrawText( // displaying the timer for the time trials
-            TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
-            ORANGE);
-      }
+    DrawText( // displaying coordinates of the robot on the field
+        TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
+                   player_pos.GetY(), player_pos.GetZ()),
+        10, 40, 20, ORANGE);
+    if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+      DrawText( // displaying the timer for the time trials
+          TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
+          ORANGE);
     }
-
-    controller_info.draw(state.input);
   }
+
+  controller_info.draw(state.input);
+}

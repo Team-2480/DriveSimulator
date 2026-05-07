@@ -13,11 +13,11 @@
 #include "sqlite3.h"
 
 class MenuScene final : public Scene {
- private:
-  struct nk_context* ctx;
+private:
+  struct nk_context *ctx;
   Font font;
   Model map_model;
-  Shader& shader;
+  Shader &shader;
   struct nk_image logo;
   struct nk_image keyboard;
   struct nk_image joystick;
@@ -33,30 +33,30 @@ class MenuScene final : public Scene {
       .projection = CAMERA_PERSPECTIVE,
   };
 
- public:
-  MenuScene(ProgramState& program_state, Shader& shader)
+public:
+  MenuScene(ProgramState &program_state, Shader &shader)
       : Scene(program_state), shader(shader) {
     int font_size = 20;
     font = LoadFontEx(RELEASE_FOLDER("Lato-Regular.ttf"), 20, NULL, 0);
     ctx = InitNuklearEx(font, font_size);
 
     logo = LoadNuklearImage(RELEASE_FOLDER("logo.png"));
-    GenTextureMipmaps((Texture*)logo.handle.ptr);
+    GenTextureMipmaps((Texture *)logo.handle.ptr);
     SetTextureFilter(TextureFromNuklear(logo), TEXTURE_FILTER_TRILINEAR);
     keyboard = LoadNuklearImage(RELEASE_FOLDER("keyboard.png"));
-    GenTextureMipmaps((Texture*)keyboard.handle.ptr);
+    GenTextureMipmaps((Texture *)keyboard.handle.ptr);
     SetTextureFilter(TextureFromNuklear(keyboard), TEXTURE_FILTER_TRILINEAR);
     joystick = LoadNuklearImage(RELEASE_FOLDER("3dpro.png"));
-    GenTextureMipmaps((Texture*)joystick.handle.ptr);
+    GenTextureMipmaps((Texture *)joystick.handle.ptr);
     SetTextureFilter(TextureFromNuklear(joystick), TEXTURE_FILTER_TRILINEAR);
     touch = LoadNuklearImage(RELEASE_FOLDER("mobile.png"));
-    GenTextureMipmaps((Texture*)touch.handle.ptr);
+    GenTextureMipmaps((Texture *)touch.handle.ptr);
     SetTextureFilter(TextureFromNuklear(touch), TEXTURE_FILTER_TRILINEAR);
     shovel = LoadNuklearImage(RELEASE_FOLDER("shovel.png"));
-    GenTextureMipmaps((Texture*)shovel.handle.ptr);
+    GenTextureMipmaps((Texture *)shovel.handle.ptr);
     SetTextureFilter(TextureFromNuklear(shovel), TEXTURE_FILTER_TRILINEAR);
     play = LoadNuklearImage(RELEASE_FOLDER("play.png"));
-    GenTextureMipmaps((Texture*)play.handle.ptr);
+    GenTextureMipmaps((Texture *)play.handle.ptr);
     SetTextureFilter(TextureFromNuklear(play), TEXTURE_FILTER_TRILINEAR);
 
     map_model = LoadModel(RELEASE_FOLDER("map.glb"));
@@ -138,305 +138,304 @@ class MenuScene final : public Scene {
                          width_x, width_y),
                  NK_WINDOW_BACKGROUND)) {
       switch (state.screen) {
-        default:
-        case ProgramState::SCREEN_MAIN_MENU:
-          nk_layout_row_dynamic(ctx, aspect_ratio * width_x, 1);
-          nk_image(ctx, logo);
+      default:
+      case ProgramState::SCREEN_MAIN_MENU:
+        nk_layout_row_dynamic(ctx, aspect_ratio * width_x, 1);
+        nk_image(ctx, logo);
+
+        nk_layout_row_dynamic(ctx, 50, 1);
+        nk_spacer(ctx);
+        nk_layout_row_dynamic(ctx, 50, 3);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Play")) {
+          state.screen = ProgramState::SCREEN_CONTROL;
+        }
+        nk_spacer(ctx);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Leaderboard")) {
+          state.screen = ProgramState::SCREEN_LEADERBOARD;
+        }
+        nk_spacer(ctx);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Quit")) {
+          state.screen = ProgramState::SCREEN_QUIT;
+        }
+        nk_spacer(ctx);
+        break;
+      case ProgramState::SCREEN_CONTROL: {
+        nk_layout_row_dynamic(ctx, 250, 2);
+        float height = 210;
+
+        ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 50});
+        ctx->style.window.rounding = 20;
+        ctx->style.window.group_border = 2;
+        ctx->style.window.group_border_color = {255, 255, 255, 255};
+        ctx->style.window.group_padding = {20, 20};
+        ctx->style.text.color = {255, 255, 255, 255};
+
+        if (nk_group_begin(ctx, "Keyboard",
+                           NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          float keyboard_height =
+              ((float)keyboard.h / keyboard.w) * nk_layout_space_bounds(ctx).w;
+
+          nk_layout_row_dynamic(ctx, keyboard_height, 1);
+          nk_image(ctx, keyboard);
+
+          nk_layout_row_dynamic(ctx, (height - keyboard_height) - 60, 1);
+
+          nk_label(ctx,
+                   "WASD lateral & JL rotational \nQ for field vs robot "
+                   "releative\nE to reset field forward",
+                   NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
 
           nk_layout_row_dynamic(ctx, 50, 1);
-          nk_spacer(ctx);
+          if (nk_button_label(ctx, "Pick")) {
+            state.input = INPUT_KEYBOARD;
+            state.screen = ProgramState::SCREEN_GAME_MODE;
+          }
+          nk_group_end(ctx);
+        }
+
+        if (nk_group_begin(ctx, "Joystick",
+                           NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          float joystick_height =
+              ((float)joystick.h / joystick.w) * nk_layout_space_bounds(ctx).w;
+          nk_layout_row_dynamic(ctx, joystick_height, 1);
+          nk_image(ctx, joystick);
+
+          nk_layout_row_dynamic(ctx, (height - joystick_height) - 60, 1);
+
+          nk_label(ctx,
+                   "Joystick for movement. Twist to turn\nButton 12 to "
+                   "toggle positioning\nButton 6 to "
+                   "reset field forward",
+                   NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+          nk_layout_row_dynamic(ctx, 50, 1);
+          if (nk_button_label(ctx, "Pick")) {
+            state.input = INPUT_JOYSTICK;
+            state.screen = ProgramState::SCREEN_GAME_MODE;
+          }
+          nk_group_end(ctx);
+        }
+
+        if (nk_group_begin(ctx, "Touch",
+                           NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          float touch_height =
+              ((float)joystick.h / joystick.w) * nk_layout_space_bounds(ctx).w;
+          nk_layout_row_dynamic(ctx, touch_height, 1);
+          nk_image(ctx, touch);
+
+          nk_layout_row_dynamic(ctx, height - touch_height - 60, 1);
+          nk_label(ctx, "Thumbs to move and rotate.",
+                   NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+          nk_layout_row_dynamic(ctx, 50, 1);
+          if (nk_button_label(ctx, "Pick")) {
+            state.input = INPUT_TOUCH;
+            state.screen = ProgramState::SCREEN_GAME_MODE;
+          }
+
+          nk_group_end(ctx);
+        }
+
+        nk_layout_row_dynamic(ctx, 50, 3);
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Back")) {
+          state.screen = ProgramState::SCREEN_MAIN_MENU;
+        }
+        nk_spacer(ctx);
+        break;
+      }
+      case ProgramState::SCREEN_SCORE_SUBMIT:
+        [[fallthrough]];
+      case ProgramState::SCREEN_GAME_MODE: {
+        nk_layout_row_dynamic(ctx, 250, 2);
+        float height = 210;
+
+        ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 50});
+        ctx->style.window.rounding = 20;
+        ctx->style.window.group_border = 2;
+        ctx->style.window.group_border_color = {255, 255, 255, 255};
+        ctx->style.window.group_padding = {20, 20};
+        ctx->style.text.color = {255, 255, 255, 255};
+
+        if (nk_group_begin(ctx, "Sandbox Mode",
+                           NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          float play_height =
+              ((float)keyboard.h / keyboard.w) * nk_layout_space_bounds(ctx).w;
+
+          nk_layout_row_dynamic(ctx, play_height, 1);
+          nk_image(ctx, play);
+
+          nk_layout_row_dynamic(ctx, (height - play_height) - 60, 1);
+
+          nk_label(ctx, "Freeplay! No score just bliss.",
+                   NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+          nk_layout_row_dynamic(ctx, 50, 1);
+          if (nk_button_label(ctx, "Pick")) {
+            state.gamemode = ProgramState::GAMEMODE_SANDBOX;
+            state.screen = ProgramState::SCREEN_GAME;
+          }
+          nk_group_end(ctx);
+        }
+
+        if (nk_group_begin(ctx, "Time Trials",
+                           NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          float play_height =
+              ((float)play.h / play.w) * nk_layout_space_bounds(ctx).w;
+          nk_layout_row_dynamic(ctx, play_height, 1);
+          nk_image(ctx, play);
+
+          nk_layout_row_dynamic(ctx, (height - play_height) - 60, 1);
+
+          nk_label(ctx, "Complete routes with the fastest time.",
+                   NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+          nk_layout_row_dynamic(ctx, 50, 1);
+          if (nk_button_label(ctx, "Pick")) {
+            state.screen = ProgramState::SCREEN_TRIAL_SELECT;
+            // state.gamemode = ProgramState::GAMEMODE_ARCADE_TIME;
+            // state.screen = ProgramState::SCREEN_GAME;
+          }
+          nk_group_end(ctx);
+        }
+
+        if (nk_group_begin(ctx, "Shovel Mode",
+                           NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          float shovel_height =
+              ((float)shovel.h / shovel.w) * nk_layout_space_bounds(ctx).w;
+          nk_layout_row_dynamic(ctx, shovel_height, 1);
+          nk_image(ctx, shovel);
+
+          nk_layout_row_dynamic(ctx, (height - shovel_height) - 60, 1);
+
+          nk_label(ctx,
+                   "Shovel the most fuel in 1 minute\nto the human player "
+                   "station.",
+                   NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+          nk_layout_row_dynamic(ctx, 50, 1);
+          if (nk_button_label(ctx, "Pick")) {
+            state.gamemode = ProgramState::GAMEMODE_ARCADE_SHOVEL;
+            state.screen = ProgramState::SCREEN_GAME;
+          }
+          nk_group_end(ctx);
+        }
+
+        nk_layout_row_dynamic(ctx, 50, 3);
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Back")) {
+          state.screen = ProgramState::SCREEN_CONTROL;
+        }
+        nk_spacer(ctx);
+        break;
+      }
+      case ProgramState::SCREEN_TRIAL_SELECT:
+        nk_layout_row_dynamic(ctx, 50, 1);
+        nk_spacer(ctx);
+        nk_layout_row_dynamic(ctx, 50, 3);
+
+        nk_spacer(ctx);
+        nk_label(ctx, "Select a Trial:", NK_TEXT_CENTERED);
+        nk_spacer(ctx);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Classic Loop")) {
+          selectTimeTrial(ProgramState::TRIAL_LOOP);
+        }
+        nk_spacer(ctx);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Figure Eight")) {
+          selectTimeTrial(ProgramState::TRIAL_EIGHT);
+        }
+        nk_spacer(ctx);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Evil Trial")) {
+          selectTimeTrial(ProgramState::TRIAL_EVIL);
+        }
+        nk_spacer(ctx);
+
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Back")) {
+          state.screen = ProgramState::SCREEN_GAME_MODE;
+        }
+        nk_spacer(ctx);
+        break;
+
+      case ProgramState::SCREEN_LEADERBOARD: {
+        ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 50});
+        ctx->style.window.rounding = 20;
+        ctx->style.window.group_border = 2;
+        ctx->style.window.group_border_color = {255, 255, 255, 255};
+        ctx->style.window.group_padding = {20, 20};
+        ctx->style.text.color = {255, 255, 255, 255};
+
+        nk_layout_row_dynamic(ctx, 600, 1);
+
+        if (nk_group_begin(ctx, "Leaderboard",
+                           NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          nk_layout_row_dynamic(ctx, 50, 2);
+
+          nk_label(ctx, "Leaderboards for: ",
+                   NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+          static const char *gamemode_options[] = {"time-trial-v1",
+                                                   "shovel-v1"};
+          static int selected_item_index = 0;
+          struct nk_vec2 size = {100, 100};
+          nk_combobox(ctx, gamemode_options, 2, &selected_item_index, 20, size);
+          query = std::format(
+              "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
+              "DESC LIMIT 10",
+              gamemode_options[selected_item_index]);
+
+          nk_layout_row_dynamic(ctx, 35, 3);
+
+          nk_label(ctx, "NAME", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+          nk_label(ctx, "TEAM", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+          nk_label(ctx, "SCORE", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+
+          for (size_t i = 0; i < 10; i++) {
+            if (i < leaderboard_cache.size()) {
+              nk_label(ctx, std::get<0>(leaderboard_cache[i]).c_str(),
+                       NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+              nk_label(ctx, std::get<1>(leaderboard_cache[i]).c_str(),
+                       NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+              nk_label(ctx, std::get<2>(leaderboard_cache[i]).c_str(),
+                       NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+            } else {
+              nk_label(ctx, "---", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+              nk_label(ctx, "---", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+              nk_label(ctx, "---", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+            }
+          }
+
           nk_layout_row_dynamic(ctx, 50, 3);
 
           nk_spacer(ctx);
-          if (nk_button_label(ctx, "Play")) {
-            state.screen = ProgramState::SCREEN_CONTROL;
-          }
-          nk_spacer(ctx);
-
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Leaderboard")) {
-            state.screen = ProgramState::SCREEN_LEADERBOARD;
-          }
-          nk_spacer(ctx);
-
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Quit")) {
-            state.screen = ProgramState::SCREEN_QUIT;
-          }
-          nk_spacer(ctx);
-          break;
-        case ProgramState::SCREEN_CONTROL: {
-          nk_layout_row_dynamic(ctx, 250, 2);
-          float height = 210;
-
-          ctx->style.window.fixed_background =
-              nk_style_item_color({0, 0, 0, 50});
-          ctx->style.window.rounding = 20;
-          ctx->style.window.group_border = 2;
-          ctx->style.window.group_border_color = {255, 255, 255, 255};
-          ctx->style.window.group_padding = {20, 20};
-          ctx->style.text.color = {255, 255, 255, 255};
-
-          if (nk_group_begin(ctx, "Keyboard",
-                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float keyboard_height = ((float)keyboard.h / keyboard.w) *
-                                    nk_layout_space_bounds(ctx).w;
-
-            nk_layout_row_dynamic(ctx, keyboard_height, 1);
-            nk_image(ctx, keyboard);
-
-            nk_layout_row_dynamic(ctx, (height - keyboard_height) - 60, 1);
-
-            nk_label(ctx,
-                     "WASD lateral & JL rotational \nQ for field vs robot "
-                     "releative\nE to reset field forward",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            nk_layout_row_dynamic(ctx, 50, 1);
-            if (nk_button_label(ctx, "Pick")) {
-              state.input = INPUT_KEYBOARD;
-              state.screen = ProgramState::SCREEN_GAME_MODE;
-            }
-            nk_group_end(ctx);
-          }
-
-          if (nk_group_begin(ctx, "Joystick",
-                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float joystick_height = ((float)joystick.h / joystick.w) *
-                                    nk_layout_space_bounds(ctx).w;
-            nk_layout_row_dynamic(ctx, joystick_height, 1);
-            nk_image(ctx, joystick);
-
-            nk_layout_row_dynamic(ctx, (height - joystick_height) - 60, 1);
-
-            nk_label(ctx,
-                     "Joystick for movement. Twist to turn\nButton 12 to "
-                     "toggle positioning\nButton 6 to "
-                     "reset field forward",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            nk_layout_row_dynamic(ctx, 50, 1);
-            if (nk_button_label(ctx, "Pick")) {
-              state.input = INPUT_JOYSTICK;
-              state.screen = ProgramState::SCREEN_GAME_MODE;
-            }
-            nk_group_end(ctx);
-          }
-
-          if (nk_group_begin(ctx, "Touch",
-                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float touch_height = ((float)joystick.h / joystick.w) *
-                                 nk_layout_space_bounds(ctx).w;
-            nk_layout_row_dynamic(ctx, touch_height, 1);
-            nk_image(ctx, touch);
-
-            nk_layout_row_dynamic(ctx, height - touch_height - 60, 1);
-            nk_label(ctx, "Thumbs to move and rotate.",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            nk_layout_row_dynamic(ctx, 50, 1);
-            if (nk_button_label(ctx, "Pick")) {
-              state.input = INPUT_TOUCH;
-              state.screen = ProgramState::SCREEN_GAME_MODE;
-            }
-
-            nk_group_end(ctx);
-          }
-
-          nk_layout_row_dynamic(ctx, 50, 3);
-          nk_spacer(ctx);
-          nk_spacer(ctx);
-          nk_spacer(ctx);
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Back")) {
+          if (nk_button_label(ctx, "Home")) {
             state.screen = ProgramState::SCREEN_MAIN_MENU;
           }
           nk_spacer(ctx);
-          break;
+
+          nk_group_end(ctx);
         }
-        case ProgramState::SCREEN_SCORE_SUBMIT:
-          [[fallthrough]];
-        case ProgramState::SCREEN_GAME_MODE: {
-          nk_layout_row_dynamic(ctx, 250, 2);
-          float height = 210;
 
-          ctx->style.window.fixed_background =
-              nk_style_item_color({0, 0, 0, 50});
-          ctx->style.window.rounding = 20;
-          ctx->style.window.group_border = 2;
-          ctx->style.window.group_border_color = {255, 255, 255, 255};
-          ctx->style.window.group_padding = {20, 20};
-          ctx->style.text.color = {255, 255, 255, 255};
-
-          if (nk_group_begin(ctx, "Sandbox Mode",
-                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float play_height = ((float)keyboard.h / keyboard.w) *
-                                nk_layout_space_bounds(ctx).w;
-
-            nk_layout_row_dynamic(ctx, play_height, 1);
-            nk_image(ctx, play);
-
-            nk_layout_row_dynamic(ctx, (height - play_height) - 60, 1);
-
-            nk_label(ctx, "Freeplay! No score just bliss.",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            nk_layout_row_dynamic(ctx, 50, 1);
-            if (nk_button_label(ctx, "Pick")) {
-              state.gamemode = ProgramState::GAMEMODE_SANDBOX;
-              state.screen = ProgramState::SCREEN_GAME;
-            }
-            nk_group_end(ctx);
-          }
-
-          if (nk_group_begin(ctx, "Time Trials",
-                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float play_height =
-                ((float)play.h / play.w) * nk_layout_space_bounds(ctx).w;
-            nk_layout_row_dynamic(ctx, play_height, 1);
-            nk_image(ctx, play);
-
-            nk_layout_row_dynamic(ctx, (height - play_height) - 60, 1);
-
-            nk_label(ctx, "Complete routes with the fastest time.",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            nk_layout_row_dynamic(ctx, 50, 1);
-            if (nk_button_label(ctx, "Pick")) {
-              state.screen = ProgramState::SCREEN_TRIAL_SELECT;
-              // state.gamemode = ProgramState::GAMEMODE_ARCADE_TIME;
-              // state.screen = ProgramState::SCREEN_GAME;
-            }
-            nk_group_end(ctx);
-          }
-
-          if (nk_group_begin(ctx, "Shovel Mode",
-                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float shovel_height =
-                ((float)shovel.h / shovel.w) * nk_layout_space_bounds(ctx).w;
-            nk_layout_row_dynamic(ctx, shovel_height, 1);
-            nk_image(ctx, shovel);
-
-            nk_layout_row_dynamic(ctx, (height - shovel_height) - 60, 1);
-
-            nk_label(ctx,
-                     "Shovel the most fuel in 1 minute\nto the human player "
-                     "station.",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            nk_layout_row_dynamic(ctx, 50, 1);
-            if (nk_button_label(ctx, "Pick")) {
-              state.gamemode = ProgramState::GAMEMODE_ARCADE_SHOVEL;
-              state.screen = ProgramState::SCREEN_GAME;
-            }
-            nk_group_end(ctx);
-          }
-
-          nk_layout_row_dynamic(ctx, 50, 3);
-          nk_spacer(ctx);
-          nk_spacer(ctx);
-          nk_spacer(ctx);
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Back")) {
-            state.screen = ProgramState::SCREEN_CONTROL;
-          }
-          nk_spacer(ctx);
-          break;
-        }
-        case ProgramState::SCREEN_TRIAL_SELECT:
-          nk_layout_row_dynamic(ctx, 50, 1);
-          nk_spacer(ctx);
-          nk_layout_row_dynamic(ctx, 50, 3);
-
-          nk_spacer(ctx);
-          nk_label(ctx, "Select a Trial:", NK_TEXT_CENTERED);
-          nk_spacer(ctx);
-
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Classic Loop")) {
-            selectTimeTrial(ProgramState::TRIAL_LOOP);
-          }
-          nk_spacer(ctx);
-
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Figure Eight")) {
-            selectTimeTrial(ProgramState::TRIAL_EIGHT);
-          }
-          nk_spacer(ctx);
-
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Back")) {
-            state.screen = ProgramState::SCREEN_GAME_MODE;
-          }
-          nk_spacer(ctx);
-          break;
-
-        case ProgramState::SCREEN_LEADERBOARD: {
-          ctx->style.window.fixed_background =
-              nk_style_item_color({0, 0, 0, 50});
-          ctx->style.window.rounding = 20;
-          ctx->style.window.group_border = 2;
-          ctx->style.window.group_border_color = {255, 255, 255, 255};
-          ctx->style.window.group_padding = {20, 20};
-          ctx->style.text.color = {255, 255, 255, 255};
-
-          nk_layout_row_dynamic(ctx, 600, 1);
-
-          if (nk_group_begin(ctx, "Leaderboard",
-                             NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            nk_layout_row_dynamic(ctx, 50, 2);
-
-            nk_label(ctx, "Leaderboards for: ",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            static const char* gamemode_options[] = {"time-trial-v1",
-                                                     "shovel-v1"};
-            static int selected_item_index = 0;
-            struct nk_vec2 size = {100, 100};
-            nk_combobox(ctx, gamemode_options, 2, &selected_item_index, 20,
-                        size);
-            query = std::format(
-                "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
-                "DESC LIMIT 10",
-                gamemode_options[selected_item_index]);
-
-            nk_layout_row_dynamic(ctx, 35, 3);
-
-            nk_label(ctx, "NAME", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-            nk_label(ctx, "TEAM", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-            nk_label(ctx, "SCORE", NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-
-            for (size_t i = 0; i < 10; i++) {
-              if (i < leaderboard_cache.size()) {
-                nk_label(ctx, std::get<0>(leaderboard_cache[i]).c_str(),
-                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-                nk_label(ctx, std::get<1>(leaderboard_cache[i]).c_str(),
-                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-                nk_label(ctx, std::get<2>(leaderboard_cache[i]).c_str(),
-                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-              } else {
-                nk_label(ctx, "---",
-                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-                nk_label(ctx, "---",
-                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-                nk_label(ctx, "---",
-                         NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
-              }
-            }
-
-            nk_layout_row_dynamic(ctx, 50, 3);
-
-            nk_spacer(ctx);
-            if (nk_button_label(ctx, "Home")) {
-              state.screen = ProgramState::SCREEN_MAIN_MENU;
-            }
-            nk_spacer(ctx);
-
-            nk_group_end(ctx);
-          }
-
-          break;
-        }
+        break;
+      }
       }
     }
     nk_end(ctx);
@@ -448,9 +447,9 @@ class MenuScene final : public Scene {
         last_query != query) {
       last_query = query;
       leaderboard_cache.clear();
-      char* err_msg;
+      char *err_msg;
       if (sqlite3_exec(state.db, query.c_str(), sqlite_leaderboard_callback,
-                       (void*)this, &err_msg) != SQLITE_OK) {
+                       (void *)this, &err_msg) != SQLITE_OK) {
         printf("%s\n", err_msg);
         sqlite3_free(err_msg);
       }
@@ -458,9 +457,9 @@ class MenuScene final : public Scene {
     last_screen = state.screen;
   }
 
-  static int sqlite_leaderboard_callback(void* data, int argc, char** argv,
-                                         char** az_col_name) {
-    MenuScene* usable_data = (MenuScene*)data;
+  static int sqlite_leaderboard_callback(void *data, int argc, char **argv,
+                                         char **az_col_name) {
+    MenuScene *usable_data = (MenuScene *)data;
 
     std::string tag = "---";
     std::string team = "---";
@@ -493,12 +492,12 @@ static Light lights[MAX_LIGHTS];
 static Shader shader;
 
 class SceneManager {
- private:
+private:
   ProgramState state;
-  sqlite3* db;
+  sqlite3 *db;
 
- public:
-  SceneManager(sqlite3* leadboard_db) : db(leadboard_db) {
+public:
+  SceneManager(sqlite3 *leadboard_db) : db(leadboard_db) {
     state.db = db;
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED |
                    FLAG_MSAA_4X_HINT);
@@ -517,7 +516,6 @@ class SceneManager {
     float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
     SetShaderValue(shader, ambient_loc, ambient_lighting, SHADER_UNIFORM_VEC4);
 
-
 #ifdef PLATFORM_WEB
     SetTraceLogLevel(LOG_ERROR);
 #endif
@@ -532,7 +530,7 @@ class SceneManager {
 
     menu_scene = std::make_shared<MenuScene>(state, shader);
 
-    char* error_msg = 0;
+    char *error_msg = 0;
     if (sqlite3_exec(db,
                      // clang-format off
 "CREATE TABLE IF NOT EXISTS \"leaderboard\" ( "
@@ -561,31 +559,31 @@ class SceneManager {
 
   bool step() {
     switch (state.screen) {
-      case ProgramState::SCREEN_LEADERBOARD:
-        [[fallthrough]];
-      case ProgramState::SCREEN_TRIAL_SELECT:
-        [[fallthrough]];
-      case ProgramState::SCREEN_GAME_MODE:
-        [[fallthrough]];
-      case ProgramState::SCREEN_CONTROL:
-        [[fallthrough]];
-      case ProgramState::SCREEN_MAIN_MENU:
-        if (game_scene.has_value()) {
-          game_scene = {};
-        }
-        scene = std::static_pointer_cast<Scene>(menu_scene.value());
-        break;
-      case ProgramState::SCREEN_SCORE_SUBMIT:
-        [[fallthrough]];
-      case ProgramState::SCREEN_GAME:
-        if (!game_scene.has_value()) {
-          game_scene = std::make_unique<GameScene>(state, shader);
-        }
-        scene = std::static_pointer_cast<Scene>(game_scene.value());
-        break;
-      case ProgramState::SCREEN_QUIT:
-        return false;
-        break;
+    case ProgramState::SCREEN_LEADERBOARD:
+      [[fallthrough]];
+    case ProgramState::SCREEN_TRIAL_SELECT:
+      [[fallthrough]];
+    case ProgramState::SCREEN_GAME_MODE:
+      [[fallthrough]];
+    case ProgramState::SCREEN_CONTROL:
+      [[fallthrough]];
+    case ProgramState::SCREEN_MAIN_MENU:
+      if (game_scene.has_value()) {
+        game_scene = {};
+      }
+      scene = std::static_pointer_cast<Scene>(menu_scene.value());
+      break;
+    case ProgramState::SCREEN_SCORE_SUBMIT:
+      [[fallthrough]];
+    case ProgramState::SCREEN_GAME:
+      if (!game_scene.has_value()) {
+        game_scene = std::make_unique<GameScene>(state, shader);
+      }
+      scene = std::static_pointer_cast<Scene>(game_scene.value());
+      break;
+    case ProgramState::SCREEN_QUIT:
+      return false;
+      break;
     }
     if (scene.has_value()) {
       scene.value()->step();
@@ -601,18 +599,18 @@ class SceneManager {
     return true;
   }
 
- private:
+private:
   const int screenWidth = 800;
   const int screenHeight = 450;
 };
 
-static SceneManager* manager;
+static SceneManager *manager;
 
 bool step() { return manager->step(); }
 void step_void() { manager->step(); }
 
 int main() {
-  sqlite3* db;
+  sqlite3 *db;
   if (sqlite3_open("bagel.db", &db) != SQLITE_OK) {
     printf("Could not open db. Quiting!\n");
     return 1;
