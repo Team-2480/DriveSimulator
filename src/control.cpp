@@ -65,22 +65,24 @@ void GamepadControlProxy::step(InputMethod method) {
     auto twist_y = GetScreenHeight() - 200;
 
     auto divider_x = GetScreenWidth() / 2;
-    auto divider_y = GetScreenHeight() / 2;
 
     Vector2 lateral_control = Vector2Zero();
     Vector2 rotational_control = Vector2Zero();
 
     joystick_inputs[4] = false;
-    
+
     for (int i = GetTouchPointCount() - 1; i >= 0; i--) {
       auto pos = GetTouchPosition(i);
-      if (pos.y > divider_y) {
-        if (pos.x < divider_x) {
-          lateral_control =
-              Vector2{(pos.x - joystick_x) / 100, (pos.y - joystick_y) / 100};
-          if (Vector2Length(lateral_control) > 1) {
-            lateral_control = Vector2Normalize(lateral_control);
-          }
+
+      if (pos.x < divider_x &&
+          !(Vector2Distance(
+                {float(GetScreenWidth() / 4),
+                 float(GetScreenHeight() - (GetScreenHeight() - 50))},
+                {pos.x, pos.y}) < 50)) {
+        lateral_control =
+            Vector2{(pos.x - joystick_x) / 100, (pos.y - joystick_y) / 100};
+        if (Vector2Length(lateral_control) > 1) {
+          lateral_control = Vector2Normalize(lateral_control);
         }
       }
       joystick_inputs[4] |= (Vector2Distance({float(GetScreenWidth() / 4),
