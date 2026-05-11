@@ -1,6 +1,7 @@
 #include "Jolt/Jolt.h"
 // on top
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -175,6 +176,7 @@ void GameScene::step() {
     ctx->style.window.padding = {20, 20};
     ctx->style.window.border_color = {255, 255, 255, 255};
     ctx->style.text.color = {255, 255, 255, 255};
+    ctx->style.edit.cursor_size = 2.0;
 
     if (nk_begin(ctx, "Score Submit",
                  nk_rect(center_x - width_x / 2, center_y - width_y / 2,
@@ -289,8 +291,8 @@ void GameScene::game_step() {
   auto player_real_velocity = jolt.get_interface().GetLinearVelocity(player_id);
 
   JPH::Vec3 axis;
-  float angle;
-  player_rot.GetAxisAngle(axis, angle);
+  auto euler = player_rot.GetEulerAngles();
+  float angle = euler.GetY();
 
   if (state.gamemode == ProgramState::GAMEMODE_SANDBOX) {
     if (IsKeyPressed(KEY_ONE)) {
@@ -392,7 +394,7 @@ void GameScene::game_step() {
   Vector3 corrected_player_velocity;
   if (global_local) {
     corrected_player_velocity = Vector3RotateByAxisAngle(
-        player_velocity, {axis.GetX(), axis.GetY(), axis.GetZ()}, angle);
+        player_velocity, {0, 1, 0}, angle);
   } else {
     corrected_player_velocity =
         Vector3RotateByAxisAngle(player_velocity, {0, 1, 0}, default_rot);
@@ -400,8 +402,8 @@ void GameScene::game_step() {
 
   jolt.get_interface().AddLinearAndAngularVelocity(
       player_id,
-      {corrected_player_velocity.x - player_real_velocity.GetX() * 0.1f, 0,
-       corrected_player_velocity.z - player_real_velocity.GetZ() * 0.1f},
+      {std::clamp(corrected_player_velocity.x - player_real_velocity.GetX() * 0.1f, -0.1f, 0.1f), 0,
+       std::clamp(corrected_player_velocity.z - player_real_velocity.GetZ() * 0.1f, -0.1f, 0.1f)},
       JPH::Vec3{-player_rot.GetX() * 1,
                 player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
                 -player_rot.GetZ() * 1});

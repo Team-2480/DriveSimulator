@@ -384,10 +384,10 @@ class MenuScene final : public Scene {
 
           if (nk_group_begin(ctx, "Leaderboard",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            nk_layout_row_dynamic(ctx, 50, 2);
+            nk_layout_row_dynamic(ctx, 20, 2);
 
             nk_label(ctx, "Leaderboards for: ",
-                     NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
+                     NK_TEXT_ALIGN_MIDDLE |NK_TEXT_ALIGN_CENTERED);
 
             static const char* gamemode_options[] = {"time-trial-v1",
                                                      "shovel-v1"};
@@ -399,6 +399,10 @@ class MenuScene final : public Scene {
                 "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
                 "DESC LIMIT 10",
                 gamemode_options[selected_item_index]);
+            nk_spacer(ctx);
+            nk_spacer(ctx);
+            nk_spacer(ctx);
+            nk_spacer(ctx);
 
             nk_layout_row_dynamic(ctx, 35, 3);
 
