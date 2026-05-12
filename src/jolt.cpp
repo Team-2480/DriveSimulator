@@ -85,8 +85,9 @@ void JoltWrapper::update() {
 }
 void JoltWrapper::make_ball(float x, float y) {
   JPH::BodyCreationSettings sphere_settings(
-      new JPH::SphereShape(Constants::BALL_RADIUS), JPH::RVec3(x, 2.0_r, y),
-      JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, Layers::MOVING);
+      new JPH::SphereShape(Constants::BALL_RADIUS),
+      JPH::RVec3(x, Constants::BALL_RADIUS, y), JPH::Quat::sIdentity(),
+      JPH::EMotionType::Dynamic, Layers::MOVING);
 
   JPH::MassProperties msp;
   msp.mMass = .02;

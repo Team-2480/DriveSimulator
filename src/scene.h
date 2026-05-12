@@ -90,6 +90,8 @@ class GameScene final : public Scene {
  private:
   bool paused = false;
   Shader& shader;
+  Shader gradient =
+      LoadShader(RELEASE_FOLDER("lighting.vs"), RELEASE_FOLDER("gradient.fs"));
   Camera3D camera;
 
   float speed_modifier = 1;  // slowmode stuff
@@ -106,9 +108,12 @@ class GameScene final : public Scene {
   float time_trials_stopwatch;
   float time_trial_target;
   float tt_target_dist;
-  std::vector<JPH::Vec3> tt_teleport_location = {{0, 0.1, 3.2}, {0, 0.1, 3.2}, {4.678705, 0.099892, 0.016103}};
-  std::vector<float> tt_teleport_rotation = {270, 270, 90};
-  std::vector<uint32_t> tt_camera_angle = {0, 0, 0};
+  std::vector<JPH::Vec3> tt_teleport_location = {
+      {4.678705, 0.099892, 0.016103},
+      {4.678705, 0.099892, 0.016103},
+      {4.678705, 0.099892, 0.016103}};
+  std::vector<float> tt_teleport_rotation = {90, 90, 90};
+  std::vector<uint32_t> tt_camera_angle = {1, 1, 1};
   std::vector<std::vector<Vector3>> time_trials{
       // time_trials[0] is the loop around the field
       {{5.87, 0, 2.68},    // bottom right
@@ -117,7 +122,7 @@ class GameScene final : public Scene {
        {-5.87, 0, 2.68},
        {5.87, 0, 2.68}},  // bottom left
 
-      {{5.87, 0, 2.68},
+      {{5.87, 0, 2.68},  // figure eight
        {5.87, 0, -2.68},
        {0, 0, 0},
        {-5.87, 0, 2.68},
@@ -125,17 +130,18 @@ class GameScene final : public Scene {
        {0, 0, 0},
        {5.87, 0, 2.68}},
       {
-          {4.678700, 0, -1.520016},
-          {2.106675, 0, -1.551985},  {2.012209, 0, 3.305091},
-          {-5.806787, 0, 3.357301},  {-5.738602, 0, -3.395988},
-          {1.444076, 0, -3.247883},  {1.380765, 0, -0.063132},
-          {-1.623889, 0, -0.125549}, {-1.560964, 0, -3.292732},
-          {-5.724292, 0, -3.379315}, {-3.869115, 0.196736, 1.323412},
-          {-1.510248, 0, 1.226238},  {-1.347372, 0, 3.382130},
-          {-5.002022, 0, 3.382130},  {-5.002022, 0, 1.581396},
-          {-2.548198, 0, 1.549455},  {0.741614, 0, -1.497310},
-          {2.721466, 0, -3.364861},  {6.213226, 0, -3.425054},
-          {6.257290, 0, 0.010247},   {4.678782, 0, -0.046586},
+          // evil trial
+          {4.678700, 0, -1.520016},  {2.106675, 0, -1.551985},
+          {2.012209, 0, 3.305091},   {-5.806787, 0, 3.357301},
+          {-5.738602, 0, -3.395988}, {1.444076, 0, -3.247883},
+          {1.380765, 0, -0.063132},  {-1.623889, 0, -0.125549},
+          {-1.560964, 0, -3.292732}, {-5.724292, 0, -3.379315},
+          {-3.869115, 0, 1.323412},  {-1.510248, 0, 1.226238},
+          {-1.347372, 0, 3.382130},  {-5.002022, 0, 3.382130},
+          {-5.002022, 0, 1.581396},  {-2.548198, 0, 1.549455},
+          {0.741614, 0, -1.497310},  {2.721466, 0, -3.364861},
+          {6.213226, 0, -3.425054},  {6.257290, 0, 0.010247},
+          {4.678782, 0, -0.046586},
       }};
   // (for robot position) field domain is [-7.83, 7.83], field range is
   // [-3.57, 3.57]
@@ -158,6 +164,8 @@ class GameScene final : public Scene {
   double default_rot = 0;
   std::array<float, 4> module_headings = {0, 0, 0, 0};
 
+  Mesh trial_target_mesh;
+  Model trial_target_model;
   Mesh wheel_mesh;
   Model wheel_model;
   Model sphere_model;

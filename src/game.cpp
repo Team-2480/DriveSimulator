@@ -53,7 +53,7 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
     }
   }
 
-  auto robot_start_pos = JPH::RVec3(0, 4, 0);
+  auto robot_start_pos = JPH::RVec3(0, 1, 0);
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
     camera_index = 3;
@@ -82,10 +82,15 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   jolt.get_interface().SetMaxAngularVelocity(player_id, 5);
   jolt.get_interface().SetFriction(player_id, 2);
 
+  trial_target_mesh = GenMeshCylinder(0.8, 10, 20);
+  trial_target_model = LoadModelFromMesh(trial_target_mesh);
   wheel_mesh = GenMeshCylinder(0.1, 0.1, 10);
   wheel_model = LoadModelFromMesh(wheel_mesh);
   for (int i = 0; i < wheel_model.materialCount; i++) {
     wheel_model.materials[i].shader = shader;
+  }
+  for (int i = 0; i < trial_target_model.materialCount; i++) {
+    trial_target_model.materials[i].shader = gradient;
   }
 
   jolt.physics_system.OptimizeBroadPhase();
@@ -96,7 +101,10 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
     // printf("time trial selected: %d\n", state.time_trial_selected);
-    camera_index = state.time_trial_selected;
+    camera_index = tt_camera_angle[state.time_trial_selected];
+    if (camera_index >= 1 && camera_index <= 3) {
+      default_rot = PI / 2;
+    }
     start_time = GetTime();
     time_trial_target = 0;
     jolt.get_interface().SetPositionAndRotation(
@@ -121,9 +129,8 @@ void GameScene::step() {
       paused = !paused;
     }
 
-    game_step();
-
     if (!paused) {
+      game_step();
       if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
         shovel_time_remaining -= 1.0 / 30.0;
         if (shovel_time_remaining < 0.0) {
@@ -150,11 +157,16 @@ void GameScene::step() {
         nk_layout_row_dynamic(ctx, 50, 1);
         nk_spacer(ctx);
         nk_layout_row_dynamic(ctx, 50, 3);
-
         nk_spacer(ctx);
-        if (nk_button_label(ctx, "Return To Home")) {
+        if (nk_button_label(ctx, "Return to Game")) {
+          paused = false;
+        }
+        nk_spacer(ctx);
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Exit to Menu")) {
           state.screen = ProgramState::SCREEN_MAIN_MENU;
         }
+        nk_spacer(ctx);
       }
       nk_end(ctx);
     }
@@ -177,6 +189,9 @@ void GameScene::step() {
     ctx->style.window.border_color = {255, 255, 255, 255};
     ctx->style.text.color = {255, 255, 255, 255};
     ctx->style.edit.cursor_size = 2.0;
+    ctx->style.edit.cursor_hover = (std::fmod(GetTime(), 1.0) < 0.5)
+                                       ? nk_color{100, 100, 100, 255}
+                                       : nk_color{0, 0, 0, 0};
 
     if (nk_begin(ctx, "Score Submit",
                  nk_rect(center_x - width_x / 2, center_y - width_y / 2,
@@ -290,9 +305,7 @@ void GameScene::game_step() {
   auto player_real_ang_rot = jolt.get_interface().GetAngularVelocity(player_id);
   auto player_real_velocity = jolt.get_interface().GetLinearVelocity(player_id);
 
-  JPH::Vec3 axis;
-  auto euler = player_rot.GetEulerAngles();
-  float angle = euler.GetY();
+  float angle = player_rot.GetRotationAngle(JPH::Vec3Arg(0.0, 1.0, 0.0));
 
   if (state.gamemode == ProgramState::GAMEMODE_SANDBOX) {
     if (IsKeyPressed(KEY_ONE)) {
@@ -323,8 +336,7 @@ void GameScene::game_step() {
 
     camera = camera_perspectives[camera_index];
   } else if (camera_index == 10) {
-    auto forward = Vector3RotateByAxisAngle(
-        {0, 0, -1}, {axis.GetX(), axis.GetY(), axis.GetZ()}, angle);
+    auto forward = Vector3RotateByAxisAngle({0, 0, -1}, {0, 1, 0}, angle);
 
     auto pos =
         Vector3{player_pos.GetX(), player_pos.GetY() + 0.3f, player_pos.GetZ()};
@@ -393,8 +405,8 @@ void GameScene::game_step() {
 
   Vector3 corrected_player_velocity;
   if (global_local) {
-    corrected_player_velocity = Vector3RotateByAxisAngle(
-        player_velocity, {0, 1, 0}, angle);
+    corrected_player_velocity =
+        Vector3RotateByAxisAngle(player_velocity, {0, 1, 0}, angle);
   } else {
     corrected_player_velocity =
         Vector3RotateByAxisAngle(player_velocity, {0, 1, 0}, default_rot);
@@ -402,8 +414,13 @@ void GameScene::game_step() {
 
   jolt.get_interface().AddLinearAndAngularVelocity(
       player_id,
-      {std::clamp(corrected_player_velocity.x - player_real_velocity.GetX() * 0.1f, -0.1f, 0.1f), 0,
-       std::clamp(corrected_player_velocity.z - player_real_velocity.GetZ() * 0.1f, -0.1f, 0.1f)},
+      {std::clamp(
+           corrected_player_velocity.x - player_real_velocity.GetX() * 0.1f,
+           -1.0f, 1.0f),
+       0,
+       std::clamp(
+           corrected_player_velocity.z - player_real_velocity.GetZ() * 0.1f,
+           -1.0f, 1.0f)},
       JPH::Vec3{-player_rot.GetX() * 1,
                 player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
                 -player_rot.GetZ() * 1});
@@ -415,10 +432,10 @@ void GameScene::game_step() {
       if (position.GetX() > 7.5 && position.GetZ() < -2) {
         // ball scored
         shovel_score++;
-        jolt.balls[ball.first] = false;
-        jolt.get_interface().DeactivateBody(ball.first);
-        jolt.get_interface().SetPosition(ball.first, JPH::Vec3(0, 10, 0),
-                                         JPH::EActivation::DontActivate);
+        jolt.get_interface().SetPosition(ball.first, JPH::Vec3(0, 8, 0),
+                                         JPH::EActivation::Activate);
+        jolt.get_interface().SetLinearVelocity(ball.first,
+                                               JPH::Vec3Arg(0, -10, 0));
       }
     }
   } else if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
@@ -539,21 +556,23 @@ void GameScene::game_draw() {
                 YELLOW);
     }
   }
-
   if (!debug)
     DrawModel(model, {}, 1.0f, WHITE);
   else
     DrawModel(jolt.convex_model, {}, 1.0f, WHITE);
 
   EndShaderMode();
-
+  BeginShaderMode(gradient);
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME &&
       state.screen == ProgramState::SCREEN_GAME) {
     tt_target_dist = Vector3Distance(
         {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()},
         time_trials[state.time_trial_selected][time_trial_target]);
-    DrawCylinder(time_trials[state.time_trial_selected][time_trial_target], 0.8,
-                 0.8, 0.1, 20, GREEN);
+    DrawModel(trial_target_model,
+              time_trials[state.time_trial_selected][time_trial_target], 1,
+              WHITE);
+    // DrawCylinder(time_trials[state.time_trial_selected][time_trial_target],
+    // 0.8, 0.8, 10, 20, CLITERAL(Color){0, 228, 48, 155});
     if (tt_target_dist < 0.8 &&
         time_trial_target !=
             time_trials[state.time_trial_selected].size() - 1) {
@@ -564,9 +583,10 @@ void GameScene::game_draw() {
       state.screen = ProgramState::SCREEN_SCORE_SUBMIT;
       /* printf("Completed Trial with a time of %.2f seconds\n",
        * time_trials_stopwatch); */
-      state.gamemode = ProgramState::GAMEMODE_SANDBOX;
+      // state.gamemode = ProgramState::GAMEMODE_SANDBOX;
     }
   }
+  EndShaderMode();
   EndMode3D();
   EndBlendMode();
 
@@ -574,8 +594,7 @@ void GameScene::game_draw() {
     DrawFPS(10, 10);
 
     if (IsKeyPressed(KEY_N)) {
-      printf("{%f, 0, %f}\n", player_pos.GetX(),
-             player_pos.GetZ());
+      printf("{%f, 0, %f}\n", player_pos.GetX(), player_pos.GetZ());
       trial_creation += "{" + std::to_string(player_pos.GetX()) + ", " +
                         std::to_string(player_pos.GetY()) + ", " +
                         std::to_string(player_pos.GetZ()) + "}, ";
@@ -583,16 +602,16 @@ void GameScene::game_draw() {
     if (IsKeyPressed(KEY_V)) {
       printf("%s\n", trial_creation.c_str());
     }
-      DrawText( // displaying coordinates of the robot on the field
-          TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
-                     player_pos.GetY(), player_pos.GetZ()),
-          10, 40, 20, ORANGE);
-      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-        DrawText( // displaying the timer for the time trials
-            TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
-            ORANGE);
-      }
+    DrawText(  // displaying coordinates of the robot on the field
+        TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
+                   player_pos.GetY(), player_pos.GetZ()),
+        10, 40, 20, ORANGE);
+    if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+      DrawText(  // displaying the timer for the time trials
+          TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
+          ORANGE);
     }
-
-    controller_info.draw(state.input);
   }
+
+  controller_info.draw(state.input);
+}

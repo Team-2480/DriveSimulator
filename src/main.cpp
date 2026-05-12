@@ -254,8 +254,6 @@ class MenuScene final : public Scene {
           nk_spacer(ctx);
           break;
         }
-        case ProgramState::SCREEN_SCORE_SUBMIT:
-          [[fallthrough]];
         case ProgramState::SCREEN_GAME_MODE: {
           nk_layout_row_dynamic(ctx, 250, 2);
           float height = 210;
@@ -365,6 +363,12 @@ class MenuScene final : public Scene {
           nk_spacer(ctx);
 
           nk_spacer(ctx);
+          if (nk_button_label(ctx, "Evil Trial")) {
+            selectTimeTrial(ProgramState::TRIAL_EVIL);
+          }
+          nk_spacer(ctx);
+
+          nk_spacer(ctx);
           if (nk_button_label(ctx, "Back")) {
             state.screen = ProgramState::SCREEN_GAME_MODE;
           }
@@ -387,7 +391,7 @@ class MenuScene final : public Scene {
             nk_layout_row_dynamic(ctx, 20, 2);
 
             nk_label(ctx, "Leaderboards for: ",
-                     NK_TEXT_ALIGN_MIDDLE |NK_TEXT_ALIGN_CENTERED);
+                     NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
 
             static const char* gamemode_options[] = {"time-trial-v1",
                                                      "shovel-v1"};
@@ -520,7 +524,6 @@ class SceneManager {
     int ambient_loc = GetShaderLocation(shader, "ambient");
     float ambient_lighting[4] = {0.1f, 0.1f, 0.1f, 1.0f};
     SetShaderValue(shader, ambient_loc, ambient_lighting, SHADER_UNIFORM_VEC4);
-
 
 #ifdef PLATFORM_WEB
     SetTraceLogLevel(LOG_ERROR);
