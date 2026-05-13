@@ -175,10 +175,7 @@ class GameScene final : public Scene {
   Font font;
   nk_context* ctx;
 
-  Mesh player_cube =
-      GenMeshCube(Constants::ROBOT_SIZE.x, Constants::ROBOT_SIZE.y,
-                  Constants::ROBOT_SIZE.z);
-  Model player_model = LoadModelFromMesh(player_cube);
+  Model player_model = LoadModel(RELEASE_FOLDER("robotmodel.glb"));
 
   Vector3 player_velocity;
   float player_rot_velocity;

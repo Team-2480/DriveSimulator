@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <format>
+#include <print>
 #include <string>
 #include <vector>
 
@@ -116,11 +117,17 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   }
 }
 
-NK_API nk_bool nk_filter_caps(const struct nk_text_edit* box, nk_rune unicode) {
-  if (unicode >= '0' && unicode <= '9') return nk_true;
-  if (unicode >= 'A' && unicode <= 'Z') return nk_true;
-
-  return nk_false;
+nk_flags nk_edit_string_zero_terminated_caps(struct nk_context* ctx,
+                                             nk_flags flags, char* buffer,
+                                             int max, nk_plugin_filter filter) {
+  nk_flags result;
+  int len = nk_strlen(buffer);
+  result = nk_edit_string(ctx, flags, buffer, &len, max, filter);
+  for (int i = 0; i < len; i++) {
+    if ('a' <= buffer[i] && buffer[i] <= 'z') buffer[i] = buffer[i] - 'a' + 'A';
+  }
+  buffer[NK_MIN(NK_MAX(max - 1, 0), len)] = '\0';
+  return result;
 }
 
 void GameScene::step() {
@@ -216,9 +223,12 @@ void GameScene::step() {
 
       nk_label(ctx, "Leaderboard Info", NK_TEXT_CENTERED);
       nk_layout_row_dynamic(ctx, 50, 2);
-      nk_flags name_tag_event = nk_edit_string_zero_terminated(
+
+      nk_label(ctx, "User Tag", NK_TEXT_CENTERED);
+      nk_label(ctx, "Team Number", NK_TEXT_CENTERED);
+      nk_flags name_tag_event = nk_edit_string_zero_terminated_caps(
           ctx, NK_EDIT_FIELD | NK_EDIT_AUTO_SELECT, submit_nametag,
-          sizeof(submit_nametag), nk_filter_caps);
+          sizeof(submit_nametag), nk_filter_ascii);
 
       if (name_tag_event == NK_EDIT_ACTIVE) {
         submit_nametag_changed = true;
@@ -232,7 +242,7 @@ void GameScene::step() {
       }
 
       nk_layout_row_dynamic(ctx, 50, 1);
-      nk_label(ctx, "Not for display purposes:", NK_TEXT_CENTERED);
+      nk_label(ctx, "Optional! Not for display purposes", NK_TEXT_CENTERED);
       nk_flags email_event =
           nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, submit_email,
                                          sizeof(submit_email), nk_filter_ascii);
@@ -241,9 +251,8 @@ void GameScene::step() {
         submit_email_changed = true;
       }
 
-      nk_layout_row_dynamic(ctx, 50, 3);
+      nk_layout_row_dynamic(ctx, 50, 4);
       nk_spacer(ctx);
-
       if (!submit_nametag_changed || !submit_number_changed) {
         nk_widget_disable_begin(ctx);
       }
@@ -258,7 +267,8 @@ void GameScene::step() {
       } else if (state.gamemode ==
                  ProgramState::GAMEMODE_ARCADE_TIME) {  // Time Trial Completion
         score = std::format("{:.2f}", time_trials_stopwatch);
-        mode = "time-trial-v1";
+        mode = std::format("time-trial-v1-trial-{}",
+                           (int)state.time_trial_selected);
       }
 
       if (nk_button_label(ctx, "Submit")) {
@@ -269,7 +279,7 @@ void GameScene::step() {
 
         char* err_msg;
         if (sqlite3_exec(state.db, query, NULL, NULL, &err_msg) != SQLITE_OK) {
-          printf("%s\n", err_msg);
+          std::println("{}", err_msg);
           sqlite3_free(err_msg);
         }
         sqlite3_free(query);
@@ -281,13 +291,6 @@ void GameScene::step() {
         nk_widget_disable_end(ctx);
       }
 
-      nk_spacer(ctx);
-
-      nk_spacer(ctx);
-      nk_spacer(ctx);
-      nk_spacer(ctx);
-
-      nk_spacer(ctx);
       if (nk_button_label(ctx, "Nope! Just quit.")) {
         state.screen = ProgramState::SCREEN_MAIN_MENU;
       }
@@ -304,6 +307,7 @@ void GameScene::game_step() {
   auto player_rot = jolt.get_interface().GetRotation(player_id);
   auto player_real_ang_rot = jolt.get_interface().GetAngularVelocity(player_id);
   auto player_real_velocity = jolt.get_interface().GetLinearVelocity(player_id);
+  auto player_real_velocity_magnitude = player_real_ang_rot.Length();
 
   float angle = player_rot.GetRotationAngle(JPH::Vec3Arg(0.0, 1.0, 0.0));
 
@@ -374,23 +378,27 @@ void GameScene::game_step() {
   } else {
     speed_modifier = 1;
   }
+  float lateral_slow_down = 1.0;
+  if (player_real_velocity_magnitude > 2) {
+    lateral_slow_down = 0.1;
+  }
 
   if (std::abs(controller_info.joystick_axis[0]) >
       Constants::CONTROLER_DEADBAND) {
-    player_velocity.x +=
-        std::pow(controller_info.joystick_axis[0], 3.0) * 5 * speed_modifier;
+    player_velocity.x += std::pow(controller_info.joystick_axis[0], 3.0f) * 5 *
+                         speed_modifier * lateral_slow_down;
   }
 
   if (std::abs(controller_info.joystick_axis[1]) >
       Constants::CONTROLER_DEADBAND) {
-    player_velocity.z +=
-        std::pow(controller_info.joystick_axis[1], 3.0) * 5 * speed_modifier;
+    player_velocity.z += std::pow(controller_info.joystick_axis[1], 3.0f) * 5 *
+                         speed_modifier * lateral_slow_down;
   }
 
   if (std::abs(controller_info.joystick_axis[2]) >
       Constants::CONTROLER_DEADBAND) {
-    player_rot_velocity -= std::pow(controller_info.joystick_axis[2], 3.0) * 3 *
-                           speed_modifier * 4;
+    player_rot_velocity -= std::pow(controller_info.joystick_axis[2], 3.0f) *
+                           3 * speed_modifier * 4;
   }
 
   if (controller_info.joystick_inputs[4] &&
@@ -405,11 +413,11 @@ void GameScene::game_step() {
 
   Vector3 corrected_player_velocity;
   if (global_local) {
-    corrected_player_velocity =
-        Vector3RotateByAxisAngle(player_velocity, {0, 1, 0}, angle);
+    corrected_player_velocity = Vector3RotateByAxisAngle(
+        player_velocity, {.x = 0, .y = 1, .z = 0}, angle);
   } else {
-    corrected_player_velocity =
-        Vector3RotateByAxisAngle(player_velocity, {0, 1, 0}, default_rot);
+    corrected_player_velocity = Vector3RotateByAxisAngle(
+        player_velocity, {.x = 0, .y = 1, .z = 0}, (float)default_rot);
   }
 
   jolt.get_interface().AddLinearAndAngularVelocity(
@@ -506,15 +514,18 @@ void GameScene::game_draw() {
 
     rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
 
-    DrawModel(player_model, {0.0, Constants::ROBOT_SIZE.y, 0.0}, 1,
-              global_local ? GREEN : MAGENTA);
+    DrawModel(player_model, {0.0, Constants::ROBOT_SIZE.y / 2, 0.0}, 1,
+              global_local ? WHITE : Color{100, 255, 255, 255});
 
+    // Forward square, not needed with such an obvious model.
+    /*
     if (camera_index != 10) {
       DrawCubeV(Vector3{0, Constants::ROBOT_SIZE.y / 2,
                         -Constants::ROBOT_SIZE.z / 2} +
                     Vector3{0.0, 0.1 + Constants::ROBOT_SIZE.y / 2, 0.0},
                 {0.1, 0.1, 0.1}, global_local ? RED : GREEN);
     }
+    */
     rlPopMatrix();
 
     auto modules = calculate_swerve_states(
@@ -525,14 +536,16 @@ void GameScene::game_draw() {
     for (int i = 0; i < 4; i++) {
       rlPushMatrix();
 
-      rlTranslatef(player_pos.GetX(), player_pos.GetY(), player_pos.GetZ());
+      rlTranslatef(player_pos.GetX(),
+                   player_pos.GetY() - Constants::ROBOT_SIZE.y / 4,
+                   player_pos.GetZ());
       rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
       rlTranslatef(modules_positions[i].x, 0, modules_positions[i].y);
       rlRotatef(modules[i].rot * RAD2DEG, 0, 1, 0);
       rlRotatef(90, 0, 0, -1);
       rlTranslatef(0, -0.1 + 0.1 / 2, 0);
 
-      DrawModel(wheel_model, {0, 0, 0}, 1, MAGENTA);
+      DrawModel(wheel_model, {0, 0, 0}, 1, BLACK);
 
       rlPopMatrix();
     }
@@ -542,7 +555,9 @@ void GameScene::game_draw() {
 
     rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
 
-    DrawCubeV({0.0, 0.0, 0.0}, Constants::ROBOT_SIZE,
+    DrawCubeV({0.0, 0.0, 0.0},
+              {Constants::ROBOT_SIZE.x, Constants::ROBOT_SIZE.y,
+               Constants::ROBOT_SIZE.z},
               global_local ? GREEN : RED);
     rlPopMatrix();
   }

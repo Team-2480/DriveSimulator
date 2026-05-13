@@ -164,6 +164,17 @@ class MenuScene final : public Scene {
             state.screen = ProgramState::SCREEN_QUIT;
           }
           nk_spacer(ctx);
+
+          if (nk_button_label(ctx, "Github")) {
+            state.screen = ProgramState::SCREEN_QUIT;
+          }
+          if (nk_button_label(ctx, "Website")) {
+            state.screen = ProgramState::SCREEN_QUIT;
+          }
+          if (nk_button_label(ctx, "Donate")) {
+            state.screen = ProgramState::SCREEN_QUIT;
+          }
+
           break;
         case ProgramState::SCREEN_CONTROL: {
           nk_layout_row_dynamic(ctx, 250, 2);
@@ -348,12 +359,6 @@ class MenuScene final : public Scene {
 
           nk_spacer(ctx);
           nk_label(ctx, "Select a Trial:", NK_TEXT_CENTERED);
-          nk_spacer(ctx);
-
-          nk_spacer(ctx);
-          if (nk_button_label(ctx, "Classic Loop")) {
-            selectTimeTrial(ProgramState::TRIAL_LOOP);
-          }
           nk_spacer(ctx);
 
           nk_spacer(ctx);
@@ -543,12 +548,11 @@ class SceneManager {
     if (sqlite3_exec(db,
                      // clang-format off
 "CREATE TABLE IF NOT EXISTS \"leaderboard\" ( "
-	"\"tag\"	TEXT NOT NULL UNIQUE COLLATE NOCASE, "
+	"\"tag\"	TEXT NOT NULL, "
 	"\"team\"	TEXT, "
 	"\"score\"	NUMERIC NOT NULL, "
 	"\"mode\"	TEXT, "
-	"\"email\"	TEXT, "
-	"PRIMARY KEY(\"tag\")"
+	"\"email\"	TEXT"
 ");",
                      // clang-format on
                      NULL, 0, &error_msg) != SQLITE_OK) {
