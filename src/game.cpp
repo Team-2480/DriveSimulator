@@ -14,6 +14,11 @@
 #include "Jolt/Math/Quat.h"
 #include "Jolt/Math/Real.h"
 #include "Jolt/Math/Vec3.h"
+#include "Jolt/Math/Vector.h"
+#include "Jolt/Physics/Collision/CastResult.h"
+#include "Jolt/Physics/Collision/CollisionCollectorImpl.h"
+#include "Jolt/Physics/Collision/RayCast.h"
+#include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "Jolt/Physics/EActivation.h"
 #include "config.h"
 #include "control.h"
@@ -227,8 +232,10 @@ void GameScene::step() {
       nk_label(ctx, "User Tag", NK_TEXT_CENTERED);
       nk_label(ctx, "Team Number", NK_TEXT_CENTERED);
       nk_flags name_tag_event = nk_edit_string_zero_terminated_caps(
-          ctx, NK_EDIT_FIELD | NK_EDIT_AUTO_SELECT, submit_nametag,
-          sizeof(submit_nametag), nk_filter_ascii);
+          ctx,
+          NK_EDIT_ALWAYS_INSERT_MODE | NK_EDIT_SELECTABLE | NK_EDIT_CLIPBOARD |
+              NK_EDIT_AUTO_SELECT,
+          submit_nametag, sizeof(submit_nametag), nk_filter_ascii);
 
       if (name_tag_event == NK_EDIT_ACTIVE) {
         submit_nametag_changed = true;
@@ -334,16 +341,23 @@ void GameScene::game_step() {
   }
 
   if (camera_index < camera_perspectives.size()) {
-    camera_perspectives[camera_index].target = Vector3Lerp(
-        camera_perspectives[camera_index].target,
-        {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()}, 0.5);
+    if (camera_index > 0) {
+      camera_perspectives[camera_index].target =
+          Vector3Lerp(camera_perspectives[camera_index].target,
+                      {.x = player_pos.GetX(),
+                       .y = player_pos.GetY(),
+                       .z = player_pos.GetZ()},
+                      0.5);
+    }
 
     camera = camera_perspectives[camera_index];
   } else if (camera_index == 10) {
-    auto forward = Vector3RotateByAxisAngle({0, 0, -1}, {0, 1, 0}, angle);
+    auto forward = Vector3RotateByAxisAngle({.x = 0, .y = 0, .z = -1},
+                                            {.x = 0, .y = 1, .z = 0}, angle);
 
-    auto pos =
-        Vector3{player_pos.GetX(), player_pos.GetY() + 0.3f, player_pos.GetZ()};
+    auto pos = Vector3{.x = player_pos.GetX(),
+                       .y = player_pos.GetY() + 0.3f,
+                       .z = player_pos.GetZ()};
 
     camera = Camera3D{
         .position = pos,
@@ -378,6 +392,20 @@ void GameScene::game_step() {
   } else {
     speed_modifier = 1;
   }
+
+  JPH::AllHitCollisionCollector<JPH::CastRayCollector> collector;
+  jolt.physics_system.GetNarrowPhaseQuery().CastRay(
+      JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
+      JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces), collector);
+
+  float dist = INFINITY;
+  for (auto hit : collector.mHits) {
+    if (hit.mBodyID == player_id) {
+      continue;
+    }
+    dist = std::min(hit.mFraction, dist);
+  }
+
   float lateral_slow_down = 1.0;
   if (player_real_velocity_magnitude > 2) {
     lateral_slow_down = 0.1;
@@ -420,18 +448,25 @@ void GameScene::game_step() {
         player_velocity, {.x = 0, .y = 1, .z = 0}, (float)default_rot);
   }
 
+  float force = 1;
+  if (dist > (Constants::ROBOT_SIZE.y / 2) * 1.5) {
+    force = 0.1;
+  }
+
   jolt.get_interface().AddLinearAndAngularVelocity(
       player_id,
-      {std::clamp(
-           corrected_player_velocity.x - player_real_velocity.GetX() * 0.1f,
-           -1.0f, 1.0f),
-       0,
-       std::clamp(
-           corrected_player_velocity.z - player_real_velocity.GetZ() * 0.1f,
-           -1.0f, 1.0f)},
+      JPH::Vec3{std::clamp(corrected_player_velocity.x -
+                               player_real_velocity.GetX() * 0.1f,
+                           -1.0f, 1.0f),
+                0,
+                std::clamp(corrected_player_velocity.z -
+                               player_real_velocity.GetZ() * 0.1f,
+                           -1.0f, 1.0f)} *
+          force,
       JPH::Vec3{-player_rot.GetX() * 1,
                 player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
-                -player_rot.GetZ() * 1});
+                -player_rot.GetZ() * 1} *
+          force);
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
     for (auto ball : jolt.balls) {

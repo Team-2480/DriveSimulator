@@ -203,30 +203,30 @@ class GameScene final : public Scene {
   std::array<Camera, 4> camera_perspectives = {
 
       Camera3D{
-          .position = Vector3{0.0f, 5.0f, 5.0f},
-          .target = Vector3{0.0f, 0.0f, 0.0f},
-          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .position = Vector3{.x = 0.0f, .y = 6.0f, .z = 0.0f},
+          .target = Vector3{.x = 0.0f, .y = 0.001f, .z = 0.0f},
+          .up = Vector3{.x = 0.0f, .y = 0.0f, .z = -1.0f},
           .fovy = 90.0f,
           .projection = CAMERA_PERSPECTIVE,
       },
       Camera3D{
-          .position = Vector3{8.5f, 1.5f, 3.0f},
-          .target = Vector3{0.0f, 1.0f, 0.0f},
-          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .position = Vector3{.x = 8.5f, .y = 1.5f, .z = 3.0f},
+          .target = Vector3{.x = 0.0f, .y = 1.0f, .z = 0.0f},
+          .up = Vector3{.x = 0.0f, .y = 1.0f, .z = 0.0f},
           .fovy = 90.0f,
           .projection = CAMERA_PERSPECTIVE,
       },
       Camera3D{
-          .position = Vector3{8.0f, 1.5f, 1.0f},
-          .target = Vector3{0.0f, 1.0f, 0.0f},
-          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .position = Vector3{.x = 8.0f, .y = 1.5f, .z = 1.0f},
+          .target = Vector3{.x = 0.0f, .y = 1.0f, .z = 0.0f},
+          .up = Vector3{.x = 0.0f, .y = 1.0f, .z = 0.0f},
           .fovy = 90.0f,
           .projection = CAMERA_PERSPECTIVE,
       },
       Camera3D{
-          .position = Vector3{8.5f, 1.5f, -2.0f},
-          .target = Vector3{0.0f, 1.0f, 0.0f},
-          .up = Vector3{0.0f, 1.0f, 0.0f},
+          .position = Vector3{.x = 8.5f, .y = 1.5f, .z = -2.0f},
+          .target = Vector3{.x = 0.0f, .y = 1.0f, .z = 0.0f},
+          .up = Vector3{.x = 0.0f, .y = 1.0f, .z = 0.0f},
           .fovy = 90.0f,
           .projection = CAMERA_PERSPECTIVE,
       }};
