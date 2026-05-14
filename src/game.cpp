@@ -277,6 +277,7 @@ void GameScene::step() {
         mode = std::format("time-trial-v1-trial-{}",
                            (int)state.time_trial_selected);
       }
+      state.leaderboard_name = mode;
 
       if (nk_button_label(ctx, "Submit")) {
         char* query = sqlite3_mprintf(
@@ -488,18 +489,36 @@ void GameScene::game_step() {
 void GameScene::draw() {
   game_draw();
 
+  if (!state.hide_cheatsheet) {
+    switch (state.input) {
+      case InputMethod::INPUT_KEYBOARD: {
+        auto min_width =
+            (float)GetScreenWidth() / (float)keyboard_cheatsheet.width;
+        auto min_height =
+            (float)GetScreenHeight() / (float)keyboard_cheatsheet.height;
+        auto scale = std::min({min_width, min_height, 0.5f});
+
+        DrawTextureEx(keyboard_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
+      } break;
+
+      default:
+        break;
+    }
+  }
+
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
     auto time_str =
         std::format("{:02.0f}:{:02.0f}", std::roundf(shovel_time_remaining),
                     std::fmod(shovel_time_remaining, 1.0) * 100);
     auto text_size = MeasureTextEx(segment_font, time_str.c_str(), 80, 1.0);
     DrawTextEx(segment_font, time_str.c_str(),
-               {GetScreenWidth() / 2.0f - text_size.x / 2.0f, 10}, 80, 1.0,
-               WHITE);
+               {.x = GetScreenWidth() / 2.0f - text_size.x / 2.0f, .y = 10}, 80,
+               1.0, WHITE);
 
     auto score_str = std::format("SCORE: {}", shovel_score);
     DrawTextEx(score_font, score_str.c_str(),
-               {GetScreenWidth() / 2.0f - text_size.x / 2.0f, 10 + text_size.y},
+               {.x = GetScreenWidth() / 2.0f - text_size.x / 2.0f,
+                .y = 10 + text_size.y},
                30, 1.0, WHITE);
   }
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {

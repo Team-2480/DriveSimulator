@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include "sqlite3.h"
 #if defined(PLATFORM_WEB)
@@ -46,6 +47,7 @@ struct ProgramState {
     SCREEN_QUIT,
     SCREEN_MAIN_MENU,
     SCREEN_CONTROL,
+    SCREEN_IMAGE_SHOW,
     SCREEN_GAME_MODE,
     SCREEN_GAME,
     SCREEN_SCORE_SUBMIT,
@@ -59,8 +61,23 @@ struct ProgramState {
     GAMEMODE_SANDBOX,
   } gamemode = GAMEMODE_SANDBOX;
 
+  enum ImageShown {
+    IMAGE_GITHUB,
+    IMAGE_WEBSITE,
+    IMAGE_DONATE,
+  } image_shown = IMAGE_GITHUB;
+
   enum TimeTrial { TRIAL_LOOP, TRIAL_EIGHT, TRIAL_EVIL } time_trial_selected;
   InputMethod input = INPUT_KEYBOARD;
+
+  std::string leaderboard_name;
+  std::unordered_map<std::string, std::string> leaderboard_map{
+      {"shovel-v1", "Shovel"},
+      {"time-trial-v1-trial-0", "Time Trial Figure Loop"},
+      {"time-trial-v1-trial-1", "Time Trial Figure Eight"},
+      {"time-trial-v1-trial-2", "Time Trial Evil Path"}};
+
+  bool hide_cheatsheet = false;
 
   sqlite3* db;
 };
@@ -93,6 +110,9 @@ class GameScene final : public Scene {
   Shader gradient =
       LoadShader(RELEASE_FOLDER("lighting.vs"), RELEASE_FOLDER("gradient.fs"));
   Camera3D camera;
+
+  Texture keyboard_cheatsheet =
+      LoadTexture(RELEASE_FOLDER("keyboardcheatsheet.png"));
 
   float speed_modifier = 1;  // slowmode stuff
 

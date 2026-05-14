@@ -153,11 +153,14 @@ class MenuScene final : public Scene {
           }
           nk_spacer(ctx);
 
+          // Uncomment once we have a proper leaderboard selector but for now :P
+          /*
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Leaderboard")) {
             state.screen = ProgramState::SCREEN_LEADERBOARD;
           }
           nk_spacer(ctx);
+          */
 
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Quit")) {
@@ -165,6 +168,11 @@ class MenuScene final : public Scene {
           }
           nk_spacer(ctx);
 
+          nk_layout_row_dynamic(ctx, 25, 1);
+          nk_spacer(ctx);
+          nk_layout_row_dynamic(ctx, 50, 5);
+
+          nk_spacer(ctx);
           if (nk_button_label(ctx, "Github")) {
             state.screen = ProgramState::SCREEN_QUIT;
           }
@@ -174,6 +182,7 @@ class MenuScene final : public Scene {
           if (nk_button_label(ctx, "Donate")) {
             state.screen = ProgramState::SCREEN_QUIT;
           }
+          nk_spacer(ctx);
 
           break;
         case ProgramState::SCREEN_CONTROL: {
@@ -181,16 +190,17 @@ class MenuScene final : public Scene {
           float height = 210;
 
           ctx->style.window.fixed_background =
-              nk_style_item_color({0, 0, 0, 50});
+              nk_style_item_color({.r = 0, .g = 0, .b = 0, .a = 50});
           ctx->style.window.rounding = 20;
           ctx->style.window.group_border = 2;
-          ctx->style.window.group_border_color = {255, 255, 255, 255};
-          ctx->style.window.group_padding = {20, 20};
-          ctx->style.text.color = {255, 255, 255, 255};
+          ctx->style.window.group_border_color = {
+              .r = 255, .g = 255, .b = 255, .a = 255};
+          ctx->style.window.group_padding = {.x = 20, .y = 20};
+          ctx->style.text.color = {.r = 255, .g = 255, .b = 255, .a = 255};
 
           if (nk_group_begin(ctx, "Keyboard",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float keyboard_height = ((float)keyboard.h / keyboard.w) *
+            float keyboard_height = ((float)keyboard.h / (float)keyboard.w) *
                                     nk_layout_space_bounds(ctx).w;
 
             nk_layout_row_dynamic(ctx, keyboard_height, 1);
@@ -213,7 +223,7 @@ class MenuScene final : public Scene {
 
           if (nk_group_begin(ctx, "Joystick",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float joystick_height = ((float)joystick.h / joystick.w) *
+            float joystick_height = ((float)joystick.h / (float)joystick.w) *
                                     nk_layout_space_bounds(ctx).w;
             nk_layout_row_dynamic(ctx, joystick_height, 1);
             nk_image(ctx, joystick);
@@ -236,7 +246,7 @@ class MenuScene final : public Scene {
 
           if (nk_group_begin(ctx, "Touch",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float touch_height = ((float)joystick.h / joystick.w) *
+            float touch_height = ((float)joystick.h / (float)joystick.w) *
                                  nk_layout_space_bounds(ctx).w;
             nk_layout_row_dynamic(ctx, touch_height, 1);
             nk_image(ctx, touch);
@@ -256,7 +266,7 @@ class MenuScene final : public Scene {
 
           nk_layout_row_dynamic(ctx, 50, 3);
           nk_spacer(ctx);
-          nk_spacer(ctx);
+          nk_checkbox_label(ctx, "Show cheatsheet", &state.hide_cheatsheet);
           nk_spacer(ctx);
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Back")) {
@@ -270,12 +280,13 @@ class MenuScene final : public Scene {
           float height = 210;
 
           ctx->style.window.fixed_background =
-              nk_style_item_color({0, 0, 0, 50});
+              nk_style_item_color({.r = 0, .g = 0, .b = 0, .a = 50});
           ctx->style.window.rounding = 20;
           ctx->style.window.group_border = 2;
-          ctx->style.window.group_border_color = {255, 255, 255, 255};
-          ctx->style.window.group_padding = {20, 20};
-          ctx->style.text.color = {255, 255, 255, 255};
+          ctx->style.window.group_border_color = {
+              .r = 255, .g = 255, .b = 255, .a = 255};
+          ctx->style.window.group_padding = {.x = 20, .y = 20};
+          ctx->style.text.color = {.r = 255, .g = 255, .b = 255, .a = 255};
 
           if (nk_group_begin(ctx, "Sandbox Mode",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
@@ -382,12 +393,13 @@ class MenuScene final : public Scene {
 
         case ProgramState::SCREEN_LEADERBOARD: {
           ctx->style.window.fixed_background =
-              nk_style_item_color({0, 0, 0, 50});
+              nk_style_item_color({.r = 0, .g = 0, .b = 0, .a = 50});
           ctx->style.window.rounding = 20;
           ctx->style.window.group_border = 2;
-          ctx->style.window.group_border_color = {255, 255, 255, 255};
-          ctx->style.window.group_padding = {20, 20};
-          ctx->style.text.color = {255, 255, 255, 255};
+          ctx->style.window.group_border_color = {
+              .r = 255, .g = 255, .b = 255, .a = 255};
+          ctx->style.window.group_padding = {.x = 20, .y = 20};
+          ctx->style.text.color = {.r = 255, .g = 255, .b = 255, .a = 255};
 
           nk_layout_row_dynamic(ctx, 600, 1);
 
@@ -398,16 +410,25 @@ class MenuScene final : public Scene {
             nk_label(ctx, "Leaderboards for: ",
                      NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
 
+            std::string leaderboard_name = state.leaderboard_name;
+            if (state.leaderboard_map.contains(state.leaderboard_name)) {
+              leaderboard_name = state.leaderboard_map[state.leaderboard_name];
+            }
+            nk_label(ctx, leaderboard_name.c_str(),
+                     NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
+            /*
             static const char* gamemode_options[] = {"time-trial-v1",
                                                      "shovel-v1"};
             static int selected_item_index = 0;
             struct nk_vec2 size = {100, 100};
             nk_combobox(ctx, gamemode_options, 2, &selected_item_index, 20,
                         size);
+                        */
+
             query = std::format(
                 "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
                 "DESC LIMIT 10",
-                gamemode_options[selected_item_index]);
+                state.leaderboard_name.c_str());
             nk_spacer(ctx);
             nk_spacer(ctx);
             nk_spacer(ctx);
