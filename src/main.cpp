@@ -170,17 +170,14 @@ class MenuScene final : public Scene {
 
           nk_layout_row_dynamic(ctx, 25, 1);
           nk_spacer(ctx);
-          nk_layout_row_dynamic(ctx, 50, 5);
+          nk_layout_row_dynamic(ctx, 50, 6);
 
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Github")) {
-            state.screen = ProgramState::SCREEN_QUIT;
+          }
+          if (nk_button_label(ctx, "Discord")) {
           }
           if (nk_button_label(ctx, "Website")) {
-            state.screen = ProgramState::SCREEN_QUIT;
-          }
-          if (nk_button_label(ctx, "Donate")) {
-            state.screen = ProgramState::SCREEN_QUIT;
           }
           nk_spacer(ctx);
 

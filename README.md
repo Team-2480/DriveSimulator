@@ -6,6 +6,10 @@ Web builds are automatically uploaded to [team2480.org/simulator/](https://team2
 
 ![](screenshot.png)
 
+[Join the BagelSim discord](https://discord.gg/8kcHXmfWJx) to stay up to date with BagelSim development.
+
+[Donate to our team](https://www.paypal.com/donate?hosted_button_id=HQUMDHSWMTB7J) if you'd like to support the work we do!
+
 ## Local Development Setup
 
 Development is done on MacOS and Linux open up WSL if your on Windows. I'd recommend a fairly up to date enviroment.
