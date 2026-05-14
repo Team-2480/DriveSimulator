@@ -25,6 +25,11 @@ class MenuScene final : public Scene {
   struct nk_image shovel;
   struct nk_image play;
 
+  struct nk_image github;
+  struct nk_image website;
+  struct nk_image donate;
+  struct nk_image discord;
+
   Camera camera{
       .position = Vector3{0.0f, 4.0f, 10.0f},
       .target = Vector3{0.0f, 0.0f, 0.0f},
@@ -58,6 +63,19 @@ class MenuScene final : public Scene {
     play = LoadNuklearImage(RELEASE_FOLDER("play.png"));
     GenTextureMipmaps((Texture*)play.handle.ptr);
     SetTextureFilter(TextureFromNuklear(play), TEXTURE_FILTER_TRILINEAR);
+
+    github = LoadNuklearImage(RELEASE_FOLDER("github.png"));
+    GenTextureMipmaps((Texture*)github.handle.ptr);
+    SetTextureFilter(TextureFromNuklear(github), TEXTURE_FILTER_TRILINEAR);
+    website = LoadNuklearImage(RELEASE_FOLDER("website.png"));
+    GenTextureMipmaps((Texture*)website.handle.ptr);
+    SetTextureFilter(TextureFromNuklear(website), TEXTURE_FILTER_TRILINEAR);
+    donate = LoadNuklearImage(RELEASE_FOLDER("donate.png"));
+    GenTextureMipmaps((Texture*)donate.handle.ptr);
+    SetTextureFilter(TextureFromNuklear(donate), TEXTURE_FILTER_TRILINEAR);
+    discord = LoadNuklearImage(RELEASE_FOLDER("discord.png"));
+    GenTextureMipmaps((Texture*)discord.handle.ptr);
+    SetTextureFilter(TextureFromNuklear(discord), TEXTURE_FILTER_TRILINEAR);
 
     map_model = LoadModel(RELEASE_FOLDER("map.glb"));
     for (int i = 0; i < map_model.materialCount; i++) {
@@ -139,6 +157,41 @@ class MenuScene final : public Scene {
                  NK_WINDOW_BACKGROUND)) {
       switch (state.screen) {
         default:
+        case ProgramState::SCREEN_IMAGE_SHOW: {
+          struct nk_image image;
+          switch (state.image_shown) {
+            case ProgramState::IMAGE_GITHUB:
+              image = github;
+              break;
+            case ProgramState::IMAGE_DONATE:
+              image = donate;
+              break;
+            case ProgramState::IMAGE_WEBSITE:
+              image = website;
+              break;
+            case ProgramState::IMAGE_DISCORD:
+              image = discord;
+              break;
+          }
+          float image_height =
+              ((float)image.h / (float)image.w) * nk_layout_space_bounds(ctx).w;
+
+          nk_layout_row_dynamic(ctx, image_height * 0.33, 3);
+          nk_spacer(ctx);
+          nk_image(ctx, image);
+          nk_spacer(ctx);
+
+          nk_layout_row_dynamic(ctx, 50, 1);
+          nk_spacer(ctx);
+
+          nk_layout_row_dynamic(ctx, 50, 3);
+          nk_spacer(ctx);
+          if (nk_button_label(ctx, "Back")) {
+            state.screen = ProgramState::SCREEN_MAIN_MENU;
+          }
+          nk_spacer(ctx);
+        } break;
+
         case ProgramState::SCREEN_MAIN_MENU:
           nk_layout_row_dynamic(ctx, aspect_ratio * width_x, 1);
           nk_image(ctx, logo);
@@ -170,14 +223,20 @@ class MenuScene final : public Scene {
 
           nk_layout_row_dynamic(ctx, 25, 1);
           nk_spacer(ctx);
-          nk_layout_row_dynamic(ctx, 50, 6);
+          nk_layout_row_dynamic(ctx, 50, 5);
 
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Github")) {
+            state.screen = ProgramState::SCREEN_IMAGE_SHOW;
+            state.image_shown = ProgramState::IMAGE_GITHUB;
           }
           if (nk_button_label(ctx, "Discord")) {
+            state.screen = ProgramState::SCREEN_IMAGE_SHOW;
+            state.image_shown = ProgramState::IMAGE_DISCORD;
           }
           if (nk_button_label(ctx, "Website")) {
+            state.screen = ProgramState::SCREEN_IMAGE_SHOW;
+            state.image_shown = ProgramState::IMAGE_WEBSITE;
           }
           nk_spacer(ctx);
 
@@ -590,6 +649,8 @@ class SceneManager {
 
   bool step() {
     switch (state.screen) {
+      case ProgramState::SCREEN_IMAGE_SHOW:
+        [[fallthrough]];
       case ProgramState::SCREEN_LEADERBOARD:
         [[fallthrough]];
       case ProgramState::SCREEN_TRIAL_SELECT:

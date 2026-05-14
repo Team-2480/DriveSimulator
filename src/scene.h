@@ -65,6 +65,7 @@ struct ProgramState {
     IMAGE_GITHUB,
     IMAGE_WEBSITE,
     IMAGE_DONATE,
+    IMAGE_DISCORD,
   } image_shown = IMAGE_GITHUB;
 
   enum TimeTrial { TRIAL_LOOP, TRIAL_EIGHT, TRIAL_EVIL } time_trial_selected;
