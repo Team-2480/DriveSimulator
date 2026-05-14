@@ -389,7 +389,7 @@ void GameScene::game_step() {
   player_rot_velocity = 0;
 
   if (controller_info.joystick_inputs[0]) {
-    speed_modifier = 0.1;
+    speed_modifier = 0.05;
   } else {
     speed_modifier = 1;
   }

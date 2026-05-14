@@ -176,7 +176,9 @@ class MenuScene final : public Scene {
           float image_height =
               ((float)image.h / (float)image.w) * nk_layout_space_bounds(ctx).w;
 
-          nk_layout_row_dynamic(ctx, image_height * 0.33, 3);
+          float scale_factor = 0.75;
+          std::array<float, 3> dynamic_widths = {(1 - scale_factor)/2, scale_factor, (1 - scale_factor)/2};
+          nk_layout_row(ctx, NK_DYNAMIC, image_height * scale_factor, 3, dynamic_widths .data());
           nk_spacer(ctx);
           nk_image(ctx, image);
           nk_spacer(ctx);
