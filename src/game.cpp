@@ -30,6 +30,9 @@
 
 GameScene::GameScene(ProgramState &program_state, Shader &shader)
     : Scene(program_state), shader(shader), jolt(shader) {
+
+  DisableCursor(); // disable cursor :D
+
   camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
   camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
   camera.up =
@@ -148,6 +151,11 @@ void GameScene::step() {
   if (state.screen == ProgramState::SCREEN_GAME) {
     if (IsKeyPressed(KEY_ESCAPE)) {
       paused = !paused;
+      if (paused == false) {
+        DisableCursor();
+      } else {
+        EnableCursor();
+      }
     }
 
     if (!paused) {
@@ -190,6 +198,7 @@ void GameScene::step() {
         nk_spacer(ctx);
         if (nk_button_label(ctx, "Return to Game")) {
           paused = false;
+          DisableCursor();
         }
         nk_spacer(ctx);
         nk_spacer(ctx);
@@ -347,22 +356,16 @@ void GameScene::game_step() {
   if (state.gamemode == ProgramState::GAMEMODE_SANDBOX) {
     if (IsKeyPressed(KEY_ONE)) {
       camera_index = 0;
-      EnableCursor();
     } else if (IsKeyPressed(KEY_TWO)) {
       camera_index = 1;
-      EnableCursor();
     } else if (IsKeyPressed(KEY_THREE)) {
       camera_index = 2;
-      EnableCursor();
     } else if (IsKeyPressed(KEY_FOUR)) {
       camera_index = 3;
-      EnableCursor();
     } else if (IsKeyPressed(KEY_NINE)) {
       camera_index = 11;
-      DisableCursor();
     } else if (IsKeyPressed(KEY_ZERO)) {
       camera_index = 10;
-      EnableCursor();
     }
   }
 
@@ -420,10 +423,10 @@ void GameScene::game_step() {
     }
 
     JPH::AllHitCollisionCollector<JPH::CastRayCollector> collector;
-    jolt.physics_system.GetNarrowPhaseQuery().CastRay(
-        JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
-        JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces),
-        collector);
+    // jolt.physics_system.GetNarrowPhaseQuery().CastRay(
+    //     JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
+    //     JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces),
+    //     collector);
 
     float dist = INFINITY;
     for (auto hit : collector.mHits) {
@@ -543,12 +546,9 @@ void GameScene::draw() {
   }
 
   if (countdown_active) {
-    CLITERAL(Color) countdown_color;
-    countdown_color = ORANGE;
+    CLITERAL(Color) countdown_color = ORANGE;
 
-    auto time_str =
-        std::format("{:02.0f}:{:02.0f}", std::roundf(countdown_timer),
-                    std::fmod(countdown_timer, 1.0) * 100);
+    auto time_str = std::format("{:2.0f}", std::roundf(countdown_timer));
     auto text_size = MeasureTextEx(segment_font, time_str.c_str(), 80, 1.0);
     DrawTextEx(segment_font, time_str.c_str(),
                {.x = GetScreenWidth() / 2.0f - text_size.x / 2.0f, .y = 10}, 80,
