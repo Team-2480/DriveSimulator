@@ -1,6 +1,7 @@
 #include "Jolt/Jolt.h"
 // on top
 
+#include <__bit/countl.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -27,14 +28,14 @@
 #include "raymath.h"
 #include "scene.h"
 
-GameScene::GameScene(ProgramState& program_state, Shader& shader)
+GameScene::GameScene(ProgramState &program_state, Shader &shader)
     : Scene(program_state), shader(shader), jolt(shader) {
-  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
+  camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
   camera.up =
-      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;            // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
+      Vector3{0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
+  camera.fovy = 90.0f;           // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
 
   model = LoadModel(RELEASE_FOLDER("map.glb"));
   for (int i = 0; i < model.materialCount; i++) {
@@ -106,13 +107,19 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   font = LoadFontEx(RELEASE_FOLDER("Lato-Regular.ttf"), 20, NULL, 0);
   ctx = InitNuklearEx(font, font_size);
 
+  if (state.gamemode == ProgramState::GAMEMODE_SANDBOX) {
+    countdown_active = false;
+  } else {
+    countdown_active = true;
+  }
+
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
     // printf("time trial selected: %d\n", state.time_trial_selected);
     camera_index = tt_camera_angle[state.time_trial_selected];
     if (camera_index >= 1 && camera_index <= 3) {
       default_rot = PI / 2;
     }
-    start_time = GetTime();
+    // start_time = GetTime();
     time_trial_target = 0;
     jolt.get_interface().SetPositionAndRotation(
         player_id,
@@ -123,14 +130,15 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   }
 }
 
-nk_flags nk_edit_string_zero_terminated_caps(struct nk_context* ctx,
-                                             nk_flags flags, char* buffer,
+nk_flags nk_edit_string_zero_terminated_caps(struct nk_context *ctx,
+                                             nk_flags flags, char *buffer,
                                              int max, nk_plugin_filter filter) {
   nk_flags result;
   int len = nk_strlen(buffer);
   result = nk_edit_string(ctx, flags, buffer, &len, max, filter);
   for (int i = 0; i < len; i++) {
-    if ('a' <= buffer[i] && buffer[i] <= 'z') buffer[i] = buffer[i] - 'a' + 'A';
+    if ('a' <= buffer[i] && buffer[i] <= 'z')
+      buffer[i] = buffer[i] - 'a' + 'A';
   }
   buffer[NK_MIN(NK_MAX(max - 1, 0), len)] = '\0';
   return result;
@@ -144,11 +152,20 @@ void GameScene::step() {
 
     if (!paused) {
       game_step();
-      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL &&
+          !countdown_active) {
         shovel_time_remaining -= 1.0 / 30.0;
         if (shovel_time_remaining < 0.0) {
           shovel_time_remaining = 0.0f;
           state.screen = ProgramState::SCREEN_SCORE_SUBMIT;
+        }
+      }
+      if (countdown_active) {
+        countdown_timer -= 1.0 / 30.0;
+        if (countdown_timer < 0.0) {
+          countdown_timer = 0.0f;
+          start_time = GetTime();
+          countdown_active = false;
         }
       }
 
@@ -276,7 +293,7 @@ void GameScene::step() {
         score = std::format("{}", shovel_score);
         mode = "shovel-v1";
       } else if (state.gamemode ==
-                 ProgramState::GAMEMODE_ARCADE_TIME) {  // Time Trial Completion
+                 ProgramState::GAMEMODE_ARCADE_TIME) { // Time Trial Completion
         score = std::format("{:.2f}", time_trials_stopwatch);
         mode = std::format("time-trial-v1-trial-{}",
                            (int)state.time_trial_selected);
@@ -284,12 +301,12 @@ void GameScene::step() {
       state.leaderboard_name = mode;
 
       if (nk_button_label(ctx, "Submit")) {
-        char* query = sqlite3_mprintf(
+        char *query = sqlite3_mprintf(
             "REPLACE INTO leaderboard VALUES ('%q', '%q', '%q', '%q', '%q');",
             submit_nametag, submit_number, std::format("{}", score).c_str(),
             mode.c_str(), submit_email);
 
-        char* err_msg;
+        char *err_msg;
         if (sqlite3_exec(state.db, query, NULL, NULL, &err_msg) != SQLITE_OK) {
           std::println("{}", err_msg);
           sqlite3_free(err_msg);
@@ -388,95 +405,96 @@ void GameScene::game_step() {
       camera.target.y -= 0.19;
     }
   }
-
-  if (IsKeyPressed(KEY_P)) {
-    debug = !debug;
-  }
-
-  player_velocity = Vector3Zero();
-  player_rot_velocity = 0;
-
-  if (controller_info.joystick_inputs[0]) {
-    speed_modifier = 0.05;
-  } else {
-    speed_modifier = 1;
-  }
-
-  JPH::AllHitCollisionCollector<JPH::CastRayCollector> collector;
-  jolt.physics_system.GetNarrowPhaseQuery().CastRay(
-      JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
-      JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces), collector);
-
-  float dist = INFINITY;
-  for (auto hit : collector.mHits) {
-    if (hit.mBodyID == player_id) {
-      continue;
+  if (!countdown_active) {
+    if (IsKeyPressed(KEY_P)) {
+      debug = !debug;
     }
-    dist = std::min(hit.mFraction, dist);
+
+    player_velocity = Vector3Zero();
+    player_rot_velocity = 0;
+
+    if (controller_info.joystick_inputs[0]) {
+      speed_modifier = 0.05;
+    } else {
+      speed_modifier = 1;
+    }
+
+    JPH::AllHitCollisionCollector<JPH::CastRayCollector> collector;
+    jolt.physics_system.GetNarrowPhaseQuery().CastRay(
+        JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
+        JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces),
+        collector);
+
+    float dist = INFINITY;
+    for (auto hit : collector.mHits) {
+      if (hit.mBodyID == player_id) {
+        continue;
+      }
+      dist = std::min(hit.mFraction, dist);
+    }
+
+    float lateral_slow_down = 1.0;
+    if (player_real_velocity_magnitude > 2) {
+      lateral_slow_down = 0.1;
+    }
+
+    if (std::abs(controller_info.joystick_axis[0]) >
+        Constants::CONTROLER_DEADBAND) {
+      player_velocity.x += std::pow(controller_info.joystick_axis[0], 3.0f) *
+                           5 * speed_modifier * lateral_slow_down;
+    }
+
+    if (std::abs(controller_info.joystick_axis[1]) >
+        Constants::CONTROLER_DEADBAND) {
+      player_velocity.z += std::pow(controller_info.joystick_axis[1], 3.0f) *
+                           5 * speed_modifier * lateral_slow_down;
+    }
+
+    if (std::abs(controller_info.joystick_axis[2]) >
+        Constants::CONTROLER_DEADBAND) {
+      player_rot_velocity -= std::pow(controller_info.joystick_axis[2], 3.0f) *
+                             3 * speed_modifier * 4;
+    }
+
+    if (controller_info.joystick_inputs[4] &&
+        !controller_info.last_joystick_inputs[4]) {
+      global_local = !global_local;
+    }
+
+    if (controller_info.joystick_inputs[11] &&
+        state.gamemode != ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+      default_rot = angle;
+    }
+
+    Vector3 corrected_player_velocity;
+    if (global_local) {
+      corrected_player_velocity = Vector3RotateByAxisAngle(
+          player_velocity, {.x = 0, .y = 1, .z = 0}, angle);
+    } else {
+      corrected_player_velocity = Vector3RotateByAxisAngle(
+          player_velocity, {.x = 0, .y = 1, .z = 0}, (float)default_rot);
+    }
+
+    float force = 1;
+    if (dist > (Constants::ROBOT_SIZE.y / 2) * 1.5) {
+      force = 0.1;
+    }
+
+    jolt.get_interface().AddLinearAndAngularVelocity(
+        player_id,
+        JPH::Vec3{std::clamp(corrected_player_velocity.x -
+                                 player_real_velocity.GetX() * 0.1f,
+                             -1.0f, 1.0f),
+                  0,
+                  std::clamp(corrected_player_velocity.z -
+                                 player_real_velocity.GetZ() * 0.1f,
+                             -1.0f, 1.0f)} *
+            force,
+        JPH::Vec3{-player_rot.GetX() * 1,
+                  player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
+                  -player_rot.GetZ() * 1} *
+            force);
   }
-
-  float lateral_slow_down = 1.0;
-  if (player_real_velocity_magnitude > 2) {
-    lateral_slow_down = 0.1;
-  }
-
-  if (std::abs(controller_info.joystick_axis[0]) >
-      Constants::CONTROLER_DEADBAND) {
-    player_velocity.x += std::pow(controller_info.joystick_axis[0], 3.0f) * 5 *
-                         speed_modifier * lateral_slow_down;
-  }
-
-  if (std::abs(controller_info.joystick_axis[1]) >
-      Constants::CONTROLER_DEADBAND) {
-    player_velocity.z += std::pow(controller_info.joystick_axis[1], 3.0f) * 5 *
-                         speed_modifier * lateral_slow_down;
-  }
-
-  if (std::abs(controller_info.joystick_axis[2]) >
-      Constants::CONTROLER_DEADBAND) {
-    player_rot_velocity -= std::pow(controller_info.joystick_axis[2], 3.0f) *
-                           3 * speed_modifier * 4;
-  }
-
-  if (controller_info.joystick_inputs[4] &&
-      !controller_info.last_joystick_inputs[4]) {
-    global_local = !global_local;
-  }
-
-  if (controller_info.joystick_inputs[11] &&
-      state.gamemode != ProgramState::GAMEMODE_ARCADE_SHOVEL) {
-    default_rot = angle;
-  }
-
-  Vector3 corrected_player_velocity;
-  if (global_local) {
-    corrected_player_velocity = Vector3RotateByAxisAngle(
-        player_velocity, {.x = 0, .y = 1, .z = 0}, angle);
-  } else {
-    corrected_player_velocity = Vector3RotateByAxisAngle(
-        player_velocity, {.x = 0, .y = 1, .z = 0}, (float)default_rot);
-  }
-
-  float force = 1;
-  if (dist > (Constants::ROBOT_SIZE.y / 2) * 1.5) {
-    force = 0.1;
-  }
-
-  jolt.get_interface().AddLinearAndAngularVelocity(
-      player_id,
-      JPH::Vec3{std::clamp(corrected_player_velocity.x -
-                               player_real_velocity.GetX() * 0.1f,
-                           -1.0f, 1.0f),
-                0,
-                std::clamp(corrected_player_velocity.z -
-                               player_real_velocity.GetZ() * 0.1f,
-                           -1.0f, 1.0f)} *
-          force,
-      JPH::Vec3{-player_rot.GetX() * 1,
-                player_rot_velocity - player_real_ang_rot.GetY() * 0.8f,
-                -player_rot.GetZ() * 1} *
-          force);
-
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
     for (auto ball : jolt.balls) {
       JPH::RVec3 position =
@@ -499,32 +517,46 @@ void GameScene::draw() {
 
   if (state.show_cheatsheet) {
     switch (state.input) {
-      case InputMethod::INPUT_KEYBOARD: {
-        auto min_width =
-            (float)GetScreenWidth() / (float)keyboard_cheatsheet.width;
-        auto min_height =
-            (float)GetScreenHeight() / (float)keyboard_cheatsheet.height;
-        auto scale = std::min({min_width, min_height, 0.5f});
+    case InputMethod::INPUT_KEYBOARD: {
+      auto min_width =
+          (float)GetScreenWidth() / (float)keyboard_cheatsheet.width;
+      auto min_height =
+          (float)GetScreenHeight() / (float)keyboard_cheatsheet.height;
+      auto scale = std::min({min_width, min_height, 0.5f});
 
-        DrawTextureEx(keyboard_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
-      } break;
+      DrawTextureEx(keyboard_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
+    } break;
 
-      case InputMethod::INPUT_JOYSTICK: {
-        auto min_width =
-            (float)GetScreenWidth() / (float)joystick_cheatsheet.width;
-        auto min_height =
-            (float)GetScreenHeight() / (float)joystick_cheatsheet.height;
-        auto scale = std::min({min_width, min_height, 0.5f});
+    case InputMethod::INPUT_JOYSTICK: {
+      auto min_width =
+          (float)GetScreenWidth() / (float)joystick_cheatsheet.width;
+      auto min_height =
+          (float)GetScreenHeight() / (float)joystick_cheatsheet.height;
+      auto scale = std::min({min_width, min_height, 0.5f});
 
-        DrawTextureEx(joystick_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
-      } break;
+      DrawTextureEx(joystick_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
+    } break;
 
-      default:
-        break;
+    default:
+      break;
     }
   }
 
-  if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+  if (countdown_active) {
+    CLITERAL(Color) countdown_color;
+    countdown_color = ORANGE;
+
+    auto time_str =
+        std::format("{:02.0f}:{:02.0f}", std::roundf(countdown_timer),
+                    std::fmod(countdown_timer, 1.0) * 100);
+    auto text_size = MeasureTextEx(segment_font, time_str.c_str(), 80, 1.0);
+    DrawTextEx(segment_font, time_str.c_str(),
+               {.x = GetScreenWidth() / 2.0f - text_size.x / 2.0f, .y = 10}, 80,
+               1.0, countdown_color);
+  }
+
+  if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL &&
+      !countdown_active) {
     auto time_str =
         std::format("{:02.0f}:{:02.0f}", std::roundf(shovel_time_remaining),
                     std::fmod(shovel_time_remaining, 1.0) * 100);
@@ -539,7 +571,8 @@ void GameScene::draw() {
                 .y = 10 + text_size.y},
                30, 1.0, WHITE);
   }
-  if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+  if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME &&
+      !countdown_active) {
     auto time_str =
         std::format("{:02.0f}:{:02.0f}", std::roundf(time_trials_stopwatch),
                     std::fmod((time_trials_stopwatch), 1.0) * 100);
@@ -651,7 +684,7 @@ void GameScene::game_draw() {
   EndShaderMode();
   BeginShaderMode(gradient);
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME &&
-      state.screen == ProgramState::SCREEN_GAME) {
+      state.screen == ProgramState::SCREEN_GAME && !countdown_active) {
     tt_target_dist = Vector3Distance(
         {player_pos.GetX(), player_pos.GetY(), player_pos.GetZ()},
         time_trials[state.time_trial_selected][time_trial_target]);
@@ -689,12 +722,12 @@ void GameScene::game_draw() {
     if (IsKeyPressed(KEY_V)) {
       printf("%s\n", trial_creation.c_str());
     }
-    DrawText(  // displaying coordinates of the robot on the field
+    DrawText( // displaying coordinates of the robot on the field
         TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
                    player_pos.GetY(), player_pos.GetZ()),
         10, 40, 20, ORANGE);
     if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-      DrawText(  // displaying the timer for the time trials
+      DrawText( // displaying the timer for the time trials
           TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
           ORANGE);
     }

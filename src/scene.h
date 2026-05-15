@@ -132,6 +132,9 @@ class GameScene final : public Scene {
   char submit_email[256] = "name@domain.com";
   bool submit_email_changed = false;
 
+  float countdown_timer = 3.0;
+  bool countdown_active;
+
   // time trials
   float time_trials_stopwatch;
   float time_trial_target;
