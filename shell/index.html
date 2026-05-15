@@ -138,6 +138,15 @@
           if (text) console.error('[post-exception status] ' + text);
         };
       };
+      Module.onRuntimeInitialized = () => {
+        const IDBFS = FS.filesystems.IDBFS;
+        const path = '/db'
+        FS.mkdir(path);
+        FS.mount(IDBFS, {}, path);
+        FS.syncfs(true, (err) => {
+          console.log(err);
+        });
+      };
     </script>
     {{{ SCRIPT }}}
 #if MODULARIZE && !EXPORT_ES6

@@ -118,9 +118,9 @@ class GameScene final : public Scene {
   float speed_modifier = 1;  // slowmode stuff
 
   // score submit
-  char submit_nametag[6] = "NAME\0";
+  char submit_nametag[6] = "\0";
   bool submit_nametag_changed = false;
-  char submit_number[6] = "00000";
+  char submit_number[6] = "\0";
   bool submit_number_changed = false;
   char submit_email[256] = "name@domain.com";
   bool submit_email_changed = false;

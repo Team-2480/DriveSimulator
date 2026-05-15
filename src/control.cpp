@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include "raymath.h"
+#include <cmath>
 #include <functional>
 
 void GamepadControlProxy::step(InputMethod method) {
@@ -20,7 +21,7 @@ void GamepadControlProxy::step(InputMethod method) {
 
     joystick_inputs[4] = IsKeyDown(KEY_Q);
     joystick_inputs[11] = IsKeyDown(KEY_E);
-    joystick_inputs[0] = IsKeyDown(KEY_C);
+    joystick_inputs[0] = IsKeyDown(KEY_I);
 
     break;
   case INPUT_JOYSTICK:

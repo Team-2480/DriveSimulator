@@ -13,13 +13,15 @@ constexpr double WHEEL_BASE =
 
 constexpr Vector3 ROBOT_SIZE = {0.794f, 0.3f, 0.940f};
 
-constexpr float CONTROLER_DEADBAND = 0.01;
+constexpr float CONTROLER_DEADBAND = 0.05;
 constexpr float BALL_RADIUS = 0.075;
 
 #ifdef PLATFORM_WEB
 #define RELEASE_FOLDER(value) "release/" value
+#define DB_FOLDER(value) "/db/" value
 #else
 #define RELEASE_FOLDER(value) "../release/" value
+#define DB_FOLDER(value) "./" value
 #endif
 
 #define VERSION_STR "v0.0.1"

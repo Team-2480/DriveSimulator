@@ -1,7 +1,9 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <memory>
+#include <print>
 #include <vector>
 
 #include "config.h"
@@ -705,10 +707,15 @@ void step_void() { manager->step(); }
 
 int main() {
   sqlite3* db;
-  if (sqlite3_open("bagel.db", &db) != SQLITE_OK) {
-    printf("Could not open db. Quiting!\n");
+
+
+  std::println("Found db {}", std::filesystem::exists(DB_FOLDER("bagel.db")));
+
+  if (sqlite3_open(DB_FOLDER("bagel.db"), &db) != SQLITE_OK) {
+    std::println("Could not open db. Quiting!");
     return 1;
   }
+
 
   manager = new SceneManager(db);
 

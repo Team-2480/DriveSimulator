@@ -292,6 +292,12 @@ void GameScene::step() {
         }
         sqlite3_free(query);
 
+        EM_ASM(
+            FS.syncfs(false, (err) => {
+              console.log(err);
+            });
+        );
+
         state.screen = ProgramState::SCREEN_LEADERBOARD;
       }
 
