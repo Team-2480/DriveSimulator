@@ -22,6 +22,7 @@ constexpr float BALL_RADIUS = 0.075;
 #else
 #define RELEASE_FOLDER(value) "../release/" value
 #define DB_FOLDER(value) "./" value
+#define EM_ASM(value)
 #endif
 
 #define VERSION_STR "v0.0.1"

@@ -25,12 +25,15 @@ class MenuScene final : public Scene {
   struct nk_image joystick;
   struct nk_image touch;
   struct nk_image shovel;
+  struct nk_image time;
   struct nk_image play;
 
   struct nk_image github;
   struct nk_image website;
   struct nk_image donate;
   struct nk_image discord;
+
+  struct nk_image check;
 
   Camera camera{
       .position = Vector3{0.0f, 4.0f, 10.0f},
@@ -62,6 +65,9 @@ class MenuScene final : public Scene {
     shovel = LoadNuklearImage(RELEASE_FOLDER("shovel.png"));
     GenTextureMipmaps((Texture*)shovel.handle.ptr);
     SetTextureFilter(TextureFromNuklear(shovel), TEXTURE_FILTER_TRILINEAR);
+    time = LoadNuklearImage(RELEASE_FOLDER("time.png"));
+    GenTextureMipmaps((Texture*)time.handle.ptr);
+    SetTextureFilter(TextureFromNuklear(time), TEXTURE_FILTER_TRILINEAR);
     play = LoadNuklearImage(RELEASE_FOLDER("play.png"));
     GenTextureMipmaps((Texture*)play.handle.ptr);
     SetTextureFilter(TextureFromNuklear(play), TEXTURE_FILTER_TRILINEAR);
@@ -78,6 +84,10 @@ class MenuScene final : public Scene {
     discord = LoadNuklearImage(RELEASE_FOLDER("discord.png"));
     GenTextureMipmaps((Texture*)discord.handle.ptr);
     SetTextureFilter(TextureFromNuklear(discord), TEXTURE_FILTER_TRILINEAR);
+
+    check = LoadNuklearImage(RELEASE_FOLDER("check.png"));
+    GenTextureMipmaps((Texture*)check.handle.ptr);
+    SetTextureFilter(TextureFromNuklear(check), TEXTURE_FILTER_TRILINEAR);
 
     map_model = LoadModel(RELEASE_FOLDER("map.glb"));
     for (int i = 0; i < map_model.materialCount; i++) {
@@ -284,6 +294,8 @@ class MenuScene final : public Scene {
               .r = 255, .g = 255, .b = 255, .a = 255};
           ctx->style.window.group_padding = {.x = 20, .y = 20};
           ctx->style.text.color = {.r = 255, .g = 255, .b = 255, .a = 255};
+          ctx->style.checkbox.cursor_normal = nk_style_item_image(check);
+          ctx->style.checkbox.cursor_hover = nk_style_item_image(check);
 
           if (nk_group_begin(ctx, "Keyboard",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
@@ -318,8 +330,8 @@ class MenuScene final : public Scene {
             nk_layout_row_dynamic(ctx, (height - joystick_height) - 60, 1);
 
             nk_label(ctx,
-                     "Joystick for movement. Twist to turn\nButton 12 to "
-                     "toggle positioning\nButton 6 to "
+                     "Joystick for movement\nButton 12 to "
+                     "toggle positioning\nButton 5 to "
                      "reset field forward",
                      NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
 
@@ -353,7 +365,7 @@ class MenuScene final : public Scene {
 
           nk_layout_row_dynamic(ctx, 50, 3);
           nk_spacer(ctx);
-          nk_checkbox_label(ctx, "Show cheatsheet", &state.hide_cheatsheet);
+          nk_checkbox_label(ctx, "Show cheatsheet", &state.show_cheatsheet);
           nk_spacer(ctx);
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Back")) {
@@ -398,12 +410,12 @@ class MenuScene final : public Scene {
 
           if (nk_group_begin(ctx, "Time Trials",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-            float play_height =
-                ((float)play.h / play.w) * nk_layout_space_bounds(ctx).w;
-            nk_layout_row_dynamic(ctx, play_height, 1);
-            nk_image(ctx, play);
+            float time_height =
+                ((float)time.h / time.w) * nk_layout_space_bounds(ctx).w;
+            nk_layout_row_dynamic(ctx, time_height, 1);
+            nk_image(ctx, time);
 
-            nk_layout_row_dynamic(ctx, (height - play_height) - 60, 1);
+            nk_layout_row_dynamic(ctx, (height - time_height) - 60, 1);
 
             nk_label(ctx, "Complete routes with the fastest time.",
                      NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED);
@@ -501,6 +513,12 @@ class MenuScene final : public Scene {
             if (state.leaderboard_map.contains(state.leaderboard_name)) {
               leaderboard_name = state.leaderboard_map[state.leaderboard_name];
             }
+            std::string leaderboard_ordering = "DESC";
+            if (state.leaderboard_ordering_map.contains(
+                    state.leaderboard_name)) {
+              leaderboard_ordering =
+                  state.leaderboard_ordering_map[state.leaderboard_name];
+            }
             nk_label(ctx, leaderboard_name.c_str(),
                      NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
             /*
@@ -514,8 +532,8 @@ class MenuScene final : public Scene {
 
             query = std::format(
                 "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
-                "DESC LIMIT 10",
-                state.leaderboard_name.c_str());
+                "{} LIMIT 10",
+                state.leaderboard_name, leaderboard_ordering);
             nk_spacer(ctx);
             nk_spacer(ctx);
             nk_spacer(ctx);

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <cstring>
 #include <format>
 #include <print>
 #include <string>
@@ -260,7 +261,10 @@ void GameScene::step() {
 
       nk_layout_row_dynamic(ctx, 50, 4);
       nk_spacer(ctx);
-      if (!submit_nametag_changed || !submit_number_changed) {
+
+      bool can_submit =
+          strlen(submit_nametag) == 0 || strlen(submit_number) == 0;
+      if (can_submit) {
         nk_widget_disable_begin(ctx);
       }
 
@@ -292,16 +296,12 @@ void GameScene::step() {
         }
         sqlite3_free(query);
 
-        EM_ASM(
-            FS.syncfs(false, (err) => {
-              console.log(err);
-            });
-        );
+        EM_ASM(FS.syncfs(false, (err) = > { console.log(err); }););
 
         state.screen = ProgramState::SCREEN_LEADERBOARD;
       }
 
-      if (!submit_nametag_changed || !submit_number_changed) {
+      if (can_submit) {
         nk_widget_disable_end(ctx);
       }
 
@@ -495,7 +495,7 @@ void GameScene::game_step() {
 void GameScene::draw() {
   game_draw();
 
-  if (!state.hide_cheatsheet) {
+  if (state.show_cheatsheet) {
     switch (state.input) {
       case InputMethod::INPUT_KEYBOARD: {
         auto min_width =
@@ -505,6 +505,16 @@ void GameScene::draw() {
         auto scale = std::min({min_width, min_height, 0.5f});
 
         DrawTextureEx(keyboard_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
+      } break;
+
+      case InputMethod::INPUT_JOYSTICK: {
+        auto min_width =
+            (float)GetScreenWidth() / (float)joystick_cheatsheet.width;
+        auto min_height =
+            (float)GetScreenHeight() / (float)joystick_cheatsheet.height;
+        auto scale = std::min({min_width, min_height, 0.5f});
+
+        DrawTextureEx(joystick_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
       } break;
 
       default:
@@ -597,7 +607,7 @@ void GameScene::game_draw() {
       rlPushMatrix();
 
       rlTranslatef(player_pos.GetX(),
-                   player_pos.GetY() - Constants::ROBOT_SIZE.y / 4,
+                   player_pos.GetY() - Constants::ROBOT_SIZE.y / 2 + 0.1,
                    player_pos.GetZ());
       rlRotatef(angle * RAD2DEG, axis.GetX(), axis.GetY(), axis.GetZ());
       rlTranslatef(modules_positions[i].x, 0, modules_positions[i].y);

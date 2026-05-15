@@ -77,8 +77,13 @@ struct ProgramState {
       {"time-trial-v1-trial-0", "Time Trial Figure Loop"},
       {"time-trial-v1-trial-1", "Time Trial Figure Eight"},
       {"time-trial-v1-trial-2", "Time Trial Evil Path"}};
+  std::unordered_map<std::string, std::string> leaderboard_ordering_map{
+      {"shovel-v1", "DESC"},
+      {"time-trial-v1-trial-0", "ASC"},
+      {"time-trial-v1-trial-1", "ASC"},
+      {"time-trial-v1-trial-2", "ASC"}};
 
-  bool hide_cheatsheet = false;
+  bool show_cheatsheet = true;
 
   sqlite3* db = nullptr;
 };
@@ -114,6 +119,8 @@ class GameScene final : public Scene {
 
   Texture keyboard_cheatsheet =
       LoadTexture(RELEASE_FOLDER("keyboardcheatsheet.png"));
+  Texture joystick_cheatsheet =
+      LoadTexture(RELEASE_FOLDER("joystickcheatsheet.png"));
 
   float speed_modifier = 1;  // slowmode stuff
 
