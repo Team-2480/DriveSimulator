@@ -80,7 +80,7 @@ struct ProgramState {
 
   bool hide_cheatsheet = false;
 
-  sqlite3* db;
+  sqlite3* db = nullptr;
 };
 
 class Scene {

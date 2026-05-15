@@ -91,7 +91,7 @@ void JoltWrapper::make_ball(float x, float y) {
 
   JPH::MassProperties msp;
   msp.mMass = .02;
-  msp.ScaleToMass(0.001);
+  msp.ScaleToMass(0.01);
 
   sphere_settings.mMassPropertiesOverride = msp;
   sphere_settings.mOverrideMassProperties =

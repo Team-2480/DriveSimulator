@@ -179,8 +179,10 @@ class MenuScene final : public Scene {
               ((float)image.h / (float)image.w) * nk_layout_space_bounds(ctx).w;
 
           float scale_factor = 0.75;
-          std::array<float, 3> dynamic_widths = {(1 - scale_factor)/2, scale_factor, (1 - scale_factor)/2};
-          nk_layout_row(ctx, NK_DYNAMIC, image_height * scale_factor, 3, dynamic_widths .data());
+          std::array<float, 3> dynamic_widths = {
+              (1 - scale_factor) / 2, scale_factor, (1 - scale_factor) / 2};
+          nk_layout_row(ctx, NK_DYNAMIC, image_height * scale_factor, 3,
+                        dynamic_widths.data());
           nk_spacer(ctx);
           nk_image(ctx, image);
           nk_spacer(ctx);
@@ -206,6 +208,31 @@ class MenuScene final : public Scene {
 
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Play")) {
+            if (state.db == nullptr) {
+              std::println("Found db {}",
+                           std::filesystem::exists(DB_FOLDER("bagel.db")));
+
+              if (sqlite3_open(DB_FOLDER("bagel.db"), &state.db) != SQLITE_OK) {
+                std::println("Could not open db. Quiting!");
+              }
+
+              char* error_msg = 0;
+              if (sqlite3_exec(state.db,
+                               // clang-format off
+"CREATE TABLE IF NOT EXISTS \"leaderboard\" ( "
+	"\"tag\"	TEXT NOT NULL, "
+	"\"team\"	TEXT, "
+	"\"score\"	NUMERIC NOT NULL, "
+	"\"mode\"	TEXT, "
+	"\"email\"	TEXT"
+");",
+                               // clang-format on
+                               nullptr, nullptr, &error_msg) != SQLITE_OK) {
+                std::println(stderr, "{}", error_msg);
+                sqlite3_free(error_msg);
+              }
+            }
+
             state.screen = ProgramState::SCREEN_CONTROL;
           }
           nk_spacer(ctx);
@@ -589,11 +616,9 @@ static Shader shader;
 class SceneManager {
  private:
   ProgramState state;
-  sqlite3* db;
 
  public:
-  SceneManager(sqlite3* leadboard_db) : db(leadboard_db) {
-    state.db = db;
+  SceneManager() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED |
                    FLAG_MSAA_4X_HINT);
     InitWindow(screenWidth, screenHeight, "BagelSim");
@@ -624,28 +649,12 @@ class SceneManager {
     JoltWrapper::init();
 
     menu_scene = std::make_shared<MenuScene>(state, shader);
-
-    char* error_msg = 0;
-    if (sqlite3_exec(db,
-                     // clang-format off
-"CREATE TABLE IF NOT EXISTS \"leaderboard\" ( "
-	"\"tag\"	TEXT NOT NULL, "
-	"\"team\"	TEXT, "
-	"\"score\"	NUMERIC NOT NULL, "
-	"\"mode\"	TEXT, "
-	"\"email\"	TEXT"
-");",
-                     // clang-format on
-                     NULL, 0, &error_msg) != SQLITE_OK) {
-      printf("%s\n", error_msg);
-      sqlite3_free(error_msg);
-    }
   }
 
   ~SceneManager() {
     JoltWrapper::free();
     UnloadShader(shader);
-    sqlite3_close(db);
+    sqlite3_close(state.db);
   }
   std::optional<std::shared_ptr<GameScene>> game_scene = std::nullopt;
   std::optional<std::shared_ptr<MenuScene>> menu_scene = std::nullopt;
@@ -706,18 +715,7 @@ bool step() { return manager->step(); }
 void step_void() { manager->step(); }
 
 int main() {
-  sqlite3* db;
-
-
-  std::println("Found db {}", std::filesystem::exists(DB_FOLDER("bagel.db")));
-
-  if (sqlite3_open(DB_FOLDER("bagel.db"), &db) != SQLITE_OK) {
-    std::println("Could not open db. Quiting!");
-    return 1;
-  }
-
-
-  manager = new SceneManager(db);
+  manager = new SceneManager();
 
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(step_void, 0, 1);
