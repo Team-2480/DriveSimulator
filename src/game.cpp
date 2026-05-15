@@ -423,10 +423,10 @@ void GameScene::game_step() {
     }
 
     JPH::AllHitCollisionCollector<JPH::CastRayCollector> collector;
-    // jolt.physics_system.GetNarrowPhaseQuery().CastRay(
-    //     JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
-    //     JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces),
-    //     collector);
+    jolt.physics_system.GetNarrowPhaseQuery().CastRay(
+        JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
+        JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces),
+        collector);
 
     float dist = INFINITY;
     for (auto hit : collector.mHits) {
