@@ -296,7 +296,9 @@ void GameScene::step() {
         }
         sqlite3_free(query);
 
-        EM_ASM(FS.syncfs(false, (err) = > { console.log(err); }););
+        // clang-format off
+        EM_ASM(FS.syncfs(false, (err) => { console.log(err); }););
+        // clang-format on
 
         state.screen = ProgramState::SCREEN_LEADERBOARD;
       }
