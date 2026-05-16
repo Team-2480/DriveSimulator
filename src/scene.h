@@ -131,6 +131,8 @@ struct ProgramState {
     return db;
   }
 
+  float idle_timer = 0;
+
  private:
   sqlite3* db = nullptr;
 };

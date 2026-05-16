@@ -497,6 +497,10 @@ class MenuScene final : public Scene {
           ctx->style.window.group_padding = {.x = 20, .y = 20};
           ctx->style.text.color = {.r = 255, .g = 255, .b = 255, .a = 255};
 
+#ifndef NOT_KIOSK
+          state.idle_timer += 1.0f / 30.0f;
+#endif
+
           nk_layout_row_dynamic(ctx, 600, 1);
 
           if (nk_group_begin(ctx, "Leaderboard",
@@ -567,6 +571,12 @@ class MenuScene final : public Scene {
             nk_spacer(ctx);
 
             nk_group_end(ctx);
+
+#ifndef NOT_KIOSK
+            if (state.idle_timer >= 60) {
+              state.screen = ProgramState::SCREEN_MAIN_MENU;
+            }
+#endif
           }
 
           break;
@@ -580,6 +590,9 @@ class MenuScene final : public Scene {
     if ((last_screen != state.screen &&
          state.screen == ProgramState::SCREEN_LEADERBOARD) ||
         last_query != query) {
+#ifndef NOT_KIOSK
+      state.idle_timer = 0;
+#endif
       last_query = query;
       leaderboard_cache.clear();
       char* err_msg;
