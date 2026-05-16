@@ -31,7 +31,7 @@
 GameScene::GameScene(ProgramState &program_state, Shader &shader)
     : Scene(program_state), shader(shader), jolt(shader) {
 
-  DisableCursor(); // disable cursor :D
+  // DisableCursor(); // disable cursor :D
 
   camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
   camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
@@ -152,9 +152,9 @@ void GameScene::step() {
     if (IsKeyPressed(KEY_ESCAPE)) {
       paused = !paused;
       if (paused == false) {
-        DisableCursor();
+        // DisableCursor();
       } else {
-        EnableCursor();
+        // EnableCursor();
       }
     }
 
@@ -198,7 +198,7 @@ void GameScene::step() {
         nk_spacer(ctx);
         if (nk_button_label(ctx, "Return to Game")) {
           paused = false;
-          DisableCursor();
+          // DisableCursor();
         }
         nk_spacer(ctx);
         nk_spacer(ctx);
