@@ -471,6 +471,11 @@ class MenuScene final : public Scene {
             nk_group_end(ctx);
           }
 
+#ifndef NOT_KIOSK
+          nk_layout_row_dynamic(ctx, 100, 1);
+          nk_spacer(ctx);
+#endif
+
           nk_layout_row_dynamic(ctx, 50, 3);
           nk_spacer(ctx);
           nk_spacer(ctx);
