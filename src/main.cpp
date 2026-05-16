@@ -444,14 +444,14 @@ class MenuScene final : public Scene {
           nk_spacer(ctx);
 
           nk_spacer(ctx);
-          if (nk_button_label(ctx, "Figure Eight")) {
-            selectTimeTrial(ProgramState::TRIAL_EIGHT);
+          if (nk_button_label(ctx, "Evil Trial")) {
+            selectTimeTrial(ProgramState::TRIAL_EVIL);
           }
           nk_spacer(ctx);
 
           nk_spacer(ctx);
-          if (nk_button_label(ctx, "Evil Trial")) {
-            selectTimeTrial(ProgramState::TRIAL_EVIL);
+          if (nk_button_label(ctx, "Figure Eight")) {
+            selectTimeTrial(ProgramState::TRIAL_EIGHT);
           }
           nk_spacer(ctx);
 
