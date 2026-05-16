@@ -219,43 +219,15 @@ class MenuScene final : public Scene {
 
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Play")) {
-            if (state.db == nullptr) {
-              std::println("Found db {}",
-                           std::filesystem::exists(DB_FOLDER("bagel.db")));
-
-              if (sqlite3_open(DB_FOLDER("bagel.db"), &state.db) != SQLITE_OK) {
-                std::println("Could not open db. Quiting!");
-              }
-
-              char* error_msg = 0;
-              if (sqlite3_exec(state.db,
-                               // clang-format off
-"CREATE TABLE IF NOT EXISTS \"leaderboard\" ( "
-	"\"tag\"	TEXT NOT NULL, "
-	"\"team\"	TEXT, "
-	"\"score\"	NUMERIC NOT NULL, "
-	"\"mode\"	TEXT, "
-	"\"email\"	TEXT"
-");",
-                               // clang-format on
-                               nullptr, nullptr, &error_msg) != SQLITE_OK) {
-                std::println(stderr, "{}", error_msg);
-                sqlite3_free(error_msg);
-              }
-            }
-
             state.screen = ProgramState::SCREEN_CONTROL;
           }
           nk_spacer(ctx);
 
-          // Uncomment once we have a proper leaderboard selector but for now :P
-          /*
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Leaderboard")) {
             state.screen = ProgramState::SCREEN_LEADERBOARD;
           }
           nk_spacer(ctx);
-          */
 
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Quit")) {
@@ -534,6 +506,14 @@ class MenuScene final : public Scene {
             nk_label(ctx, "Leaderboards for: ",
                      NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
 
+            struct nk_vec2 size = {300, 300};
+            nk_combobox(ctx, state.leaderboard_pretty_names.data(),
+                        state.leaderboard_pretty_names.size(),
+                        &state.selected_leaderboard, 20, size);
+            state.leaderboard_name =
+                state.leaderboard_reverse_map[state.leaderboard_pretty_names
+                                                  [state.selected_leaderboard]];
+
             std::string leaderboard_name = state.leaderboard_name;
             if (state.leaderboard_map.contains(state.leaderboard_name)) {
               leaderboard_name = state.leaderboard_map[state.leaderboard_name];
@@ -544,16 +524,6 @@ class MenuScene final : public Scene {
               leaderboard_ordering =
                   state.leaderboard_ordering_map[state.leaderboard_name];
             }
-            nk_label(ctx, leaderboard_name.c_str(),
-                     NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
-            /*
-            static const char* gamemode_options[] = {"time-trial-v1",
-                                                     "shovel-v1"};
-            static int selected_item_index = 0;
-            struct nk_vec2 size = {100, 100};
-            nk_combobox(ctx, gamemode_options, 2, &selected_item_index, 20,
-                        size);
-                        */
 
             query = std::format(
                 "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
@@ -613,8 +583,9 @@ class MenuScene final : public Scene {
       last_query = query;
       leaderboard_cache.clear();
       char* err_msg;
-      if (sqlite3_exec(state.db, query.c_str(), sqlite_leaderboard_callback,
-                       (void*)this, &err_msg) != SQLITE_OK) {
+      if (sqlite3_exec(state.get_db(), query.c_str(),
+                       sqlite_leaderboard_callback, (void*)this,
+                       &err_msg) != SQLITE_OK) {
         printf("%s\n", err_msg);
         sqlite3_free(err_msg);
       }
@@ -697,7 +668,7 @@ class SceneManager {
   ~SceneManager() {
     JoltWrapper::free();
     UnloadShader(shader);
-    sqlite3_close(state.db);
+    sqlite3_close(state.get_db());
   }
   std::optional<std::shared_ptr<GameScene>> game_scene = std::nullopt;
   std::optional<std::shared_ptr<MenuScene>> menu_scene = std::nullopt;
