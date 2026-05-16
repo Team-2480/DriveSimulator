@@ -1,7 +1,6 @@
 #include "Jolt/Jolt.h"
 // on top
 
-#include <__bit/countl.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -28,17 +27,16 @@
 #include "raymath.h"
 #include "scene.h"
 
-GameScene::GameScene(ProgramState &program_state, Shader &shader)
+GameScene::GameScene(ProgramState& program_state, Shader& shader)
     : Scene(program_state), shader(shader), jolt(shader) {
-
   // DisableCursor(); // disable cursor :D
 
-  camera.position = Vector3{0.0f, 5.0f, 5.0f}; // Camera position
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};   // Camera looking at point
+  camera.position = Vector3{0.0f, 5.0f, 5.0f};  // Camera position
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};    // Camera looking at point
   camera.up =
-      Vector3{0.0f, 1.0f, 0.0f}; // Camera up vector (rotation towards target)
-  camera.fovy = 90.0f;           // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE; // Camera projection type
+      Vector3{0.0f, 1.0f, 0.0f};  // Camera up vector (rotation towards target)
+  camera.fovy = 90.0f;            // Camera field-of-view Y
+  camera.projection = CAMERA_PERSPECTIVE;  // Camera projection type
 
   model = LoadModel(RELEASE_FOLDER("map.glb"));
   for (int i = 0; i < model.materialCount; i++) {
@@ -133,15 +131,14 @@ GameScene::GameScene(ProgramState &program_state, Shader &shader)
   }
 }
 
-nk_flags nk_edit_string_zero_terminated_caps(struct nk_context *ctx,
-                                             nk_flags flags, char *buffer,
+nk_flags nk_edit_string_zero_terminated_caps(struct nk_context* ctx,
+                                             nk_flags flags, char* buffer,
                                              int max, nk_plugin_filter filter) {
   nk_flags result;
   int len = nk_strlen(buffer);
   result = nk_edit_string(ctx, flags, buffer, &len, max, filter);
   for (int i = 0; i < len; i++) {
-    if ('a' <= buffer[i] && buffer[i] <= 'z')
-      buffer[i] = buffer[i] - 'a' + 'A';
+    if ('a' <= buffer[i] && buffer[i] <= 'z') buffer[i] = buffer[i] - 'a' + 'A';
   }
   buffer[NK_MIN(NK_MAX(max - 1, 0), len)] = '\0';
   return result;
@@ -302,7 +299,7 @@ void GameScene::step() {
         score = std::format("{}", shovel_score);
         mode = "shovel-v1";
       } else if (state.gamemode ==
-                 ProgramState::GAMEMODE_ARCADE_TIME) { // Time Trial Completion
+                 ProgramState::GAMEMODE_ARCADE_TIME) {  // Time Trial Completion
         score = std::format("{:.2f}", time_trials_stopwatch);
         mode = std::format("time-trial-v1-trial-{}",
                            (int)state.time_trial_selected);
@@ -310,12 +307,12 @@ void GameScene::step() {
       state.leaderboard_name = mode;
 
       if (nk_button_label(ctx, "Submit")) {
-        char *query = sqlite3_mprintf(
+        char* query = sqlite3_mprintf(
             "REPLACE INTO leaderboard VALUES ('%q', '%q', '%q', '%q', '%q');",
             submit_nametag, submit_number, std::format("{}", score).c_str(),
             mode.c_str(), submit_email);
 
-        char *err_msg;
+        char* err_msg;
         if (sqlite3_exec(state.db, query, NULL, NULL, &err_msg) != SQLITE_OK) {
           std::println("{}", err_msg);
           sqlite3_free(err_msg);
@@ -425,8 +422,7 @@ void GameScene::game_step() {
     JPH::AllHitCollisionCollector<JPH::CastRayCollector> collector;
     jolt.physics_system.GetNarrowPhaseQuery().CastRay(
         JPH::RRayCast(player_pos, JPH::Vec3(0.0, -1.0, 0.0)),
-        JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces),
-        collector);
+        JPH::RayCastSettings(JPH::EBackFaceMode::IgnoreBackFaces), collector);
 
     float dist = INFINITY;
     for (auto hit : collector.mHits) {
@@ -479,6 +475,7 @@ void GameScene::game_step() {
     }
 
     float force = 1;
+    stuck = dist > (Constants::ROBOT_SIZE.y / 2) * 1.5;
     if (dist > (Constants::ROBOT_SIZE.y / 2) * 1.5) {
       force = 0.1;
     }
@@ -520,28 +517,28 @@ void GameScene::draw() {
 
   if (state.show_cheatsheet) {
     switch (state.input) {
-    case InputMethod::INPUT_KEYBOARD: {
-      auto min_width =
-          (float)GetScreenWidth() / (float)keyboard_cheatsheet.width;
-      auto min_height =
-          (float)GetScreenHeight() / (float)keyboard_cheatsheet.height;
-      auto scale = std::min({min_width, min_height, 0.5f});
+      case InputMethod::INPUT_KEYBOARD: {
+        auto min_width =
+            (float)GetScreenWidth() / (float)keyboard_cheatsheet.width;
+        auto min_height =
+            (float)GetScreenHeight() / (float)keyboard_cheatsheet.height;
+        auto scale = std::min({min_width, min_height, 0.5f});
 
-      DrawTextureEx(keyboard_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
-    } break;
+        DrawTextureEx(keyboard_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
+      } break;
 
-    case InputMethod::INPUT_JOYSTICK: {
-      auto min_width =
-          (float)GetScreenWidth() / (float)joystick_cheatsheet.width;
-      auto min_height =
-          (float)GetScreenHeight() / (float)joystick_cheatsheet.height;
-      auto scale = std::min({min_width, min_height, 0.5f});
+      case InputMethod::INPUT_JOYSTICK: {
+        auto min_width =
+            (float)GetScreenWidth() / (float)joystick_cheatsheet.width;
+        auto min_height =
+            (float)GetScreenHeight() / (float)joystick_cheatsheet.height;
+        auto scale = std::min({min_width, min_height, 0.5f});
 
-      DrawTextureEx(joystick_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
-    } break;
+        DrawTextureEx(joystick_cheatsheet, Vector2Zero(), 0.0, scale, WHITE);
+      } break;
 
-    default:
-      break;
+      default:
+        break;
     }
   }
 
@@ -631,6 +628,7 @@ void GameScene::game_draw() {
                 {0.1, 0.1, 0.1}, global_local ? RED : GREEN);
     }
     */
+
     rlPopMatrix();
 
     auto modules = calculate_swerve_states(
@@ -691,8 +689,6 @@ void GameScene::game_draw() {
     DrawModel(trial_target_model,
               time_trials[state.time_trial_selected][time_trial_target], 1,
               WHITE);
-    // DrawCylinder(time_trials[state.time_trial_selected][time_trial_target],
-    // 0.8, 0.8, 10, 20, CLITERAL(Color){0, 228, 48, 155});
     if (tt_target_dist < 0.8 &&
         time_trial_target !=
             time_trials[state.time_trial_selected].size() - 1) {
@@ -701,9 +697,6 @@ void GameScene::game_draw() {
                time_trial_target ==
                    time_trials[state.time_trial_selected].size() - 1) {
       state.screen = ProgramState::SCREEN_SCORE_SUBMIT;
-      /* printf("Completed Trial with a time of %.2f seconds\n",
-       * time_trials_stopwatch); */
-      // state.gamemode = ProgramState::GAMEMODE_SANDBOX;
     }
   }
   EndShaderMode();
@@ -722,16 +715,35 @@ void GameScene::game_draw() {
     if (IsKeyPressed(KEY_V)) {
       printf("%s\n", trial_creation.c_str());
     }
-    DrawText( // displaying coordinates of the robot on the field
+    DrawText(  // displaying coordinates of the robot on the field
         TextFormat("X: %f, Y: %f, Z: %f\n", player_pos.GetX(),
                    player_pos.GetY(), player_pos.GetZ()),
         10, 40, 20, ORANGE);
     if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-      DrawText( // displaying the timer for the time trials
+      DrawText(  // displaying the timer for the time trials
           TextFormat("Trial Target Dist: %f\n", tt_target_dist), 10, 70, 20,
           ORANGE);
     }
   }
+
+  auto y_cursor = std::max(GetScreenHeight() - 100, 0);
+  auto x_cursor = 10;
+
+  DrawRectangle(
+      x_cursor, y_cursor, 30, 30,
+      global_local ? Color{163, 212, 226, 255} : Color{177, 163, 226, 255});
+  DrawTextEx(
+      score_font, "Local (blue) or Global (purple) relative movement ",
+      {static_cast<float>(x_cursor + 35), static_cast<float>(y_cursor + 5)}, 20,
+      0, WHITE);
+  y_cursor += 40;
+
+  DrawRectangle(x_cursor, y_cursor, 30, 30,
+                stuck ? Color{226, 178, 163, 255} : Color{163, 226, 178, 255});
+  DrawTextEx(
+      score_font, "Stuck indicatior",
+      {static_cast<float>(x_cursor + 35), static_cast<float>(y_cursor + 5)}, 20,
+      0, WHITE);
 
   controller_info.draw(state.input);
 }

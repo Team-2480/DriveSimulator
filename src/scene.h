@@ -188,6 +188,7 @@ class GameScene final : public Scene {
   // always
   JPH::BodyID player_id;
 
+  bool stuck = false;
   JoltWrapper jolt;
   uint32_t camera_index = 0;
   GamepadControlProxy controller_info;
