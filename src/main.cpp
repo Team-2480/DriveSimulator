@@ -1,3 +1,4 @@
+#include <array>
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
@@ -283,7 +284,13 @@ class MenuScene final : public Scene {
 
           break;
         case ProgramState::SCREEN_CONTROL: {
+#ifdef NOT_KIOSK
           nk_layout_row_dynamic(ctx, 250, 2);
+#else
+          std::array<float, 3> center_half = {0.25, 0.5, 0.25};
+          nk_layout_row(ctx, NK_DYNAMIC, 250, 3, center_half.data());
+          nk_spacer(ctx);
+#endif
           float height = 210;
 
           ctx->style.window.fixed_background =
@@ -297,6 +304,7 @@ class MenuScene final : public Scene {
           ctx->style.checkbox.cursor_normal = nk_style_item_image(check);
           ctx->style.checkbox.cursor_hover = nk_style_item_image(check);
 
+#ifdef NOT_KIOSK
           if (nk_group_begin(ctx, "Keyboard",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
             float keyboard_height = ((float)keyboard.h / (float)keyboard.w) *
@@ -319,6 +327,7 @@ class MenuScene final : public Scene {
             }
             nk_group_end(ctx);
           }
+#endif
 
           if (nk_group_begin(ctx, "Joystick",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
@@ -343,6 +352,8 @@ class MenuScene final : public Scene {
             nk_group_end(ctx);
           }
 
+#ifdef NOT_KIOSK
+
           if (nk_group_begin(ctx, "Touch",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
             float touch_height = ((float)joystick.h / (float)joystick.w) *
@@ -362,6 +373,13 @@ class MenuScene final : public Scene {
 
             nk_group_end(ctx);
           }
+#endif
+
+#ifndef NOT_KIOSK
+          nk_spacer(ctx);
+          nk_layout_row_dynamic(ctx, 100, 1);
+          nk_spacer(ctx);
+#endif
 
           nk_layout_row_dynamic(ctx, 50, 3);
           nk_spacer(ctx);
@@ -387,6 +405,7 @@ class MenuScene final : public Scene {
           ctx->style.window.group_padding = {.x = 20, .y = 20};
           ctx->style.text.color = {.r = 255, .g = 255, .b = 255, .a = 255};
 
+#ifdef NOT_KIOSK
           if (nk_group_begin(ctx, "Sandbox Mode",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
             float play_height = ((float)keyboard.h / keyboard.w) *
@@ -407,6 +426,7 @@ class MenuScene final : public Scene {
             }
             nk_group_end(ctx);
           }
+#endif
 
           if (nk_group_begin(ctx, "Time Trials",
                              NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
