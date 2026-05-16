@@ -1,6 +1,8 @@
 #pragma once
 
+#include <filesystem>
 #include <optional>
+#include <print>
 #include <string>
 #include <unordered_map>
 
@@ -73,18 +75,63 @@ struct ProgramState {
 
   std::string leaderboard_name;
   std::unordered_map<std::string, std::string> leaderboard_map{
-      {"shovel-v1", "Shovel"},
-      {"time-trial-v1-trial-0", "Time Trial Figure Loop"},
-      {"time-trial-v1-trial-1", "Time Trial Figure Eight"},
-      {"time-trial-v1-trial-2", "Time Trial Evil Path"}};
+#define LEADERBOARD(a, b, c) {a, b},
+#include "leaderboard.inc"
+#undef LEADERBOARD
+  };
+
+  std::unordered_map<std::string, std::string> leaderboard_reverse_map = {
+#define LEADERBOARD(a, b, c) {b, a},
+#include "leaderboard.inc"
+#undef LEADERBOARD
+  };
+
+  std::vector<const char*> leaderboard_pretty_names = {
+#define LEADERBOARD(a, b, c) b,
+#include "leaderboard.inc"
+#undef LEADERBOARD
+  };
+
   std::unordered_map<std::string, std::string> leaderboard_ordering_map{
-      {"shovel-v1", "DESC"},
-      {"time-trial-v1-trial-0", "ASC"},
-      {"time-trial-v1-trial-1", "ASC"},
-      {"time-trial-v1-trial-2", "ASC"}};
+#define LEADERBOARD(a, b, c) {a, c},
+#include "leaderboard.inc"
+#undef LEADERBOARD
+  };
+
+  int selected_leaderboard = 0;
 
   bool show_cheatsheet = true;
+  //
+  // we only construct the db when we need it to beat race coditions on the web
+  sqlite3* get_db() {
+    if (db == nullptr) {
+      std::println("Found db {}",
+                   std::filesystem::exists(DB_FOLDER("bagel.db")));
 
+      if (sqlite3_open(DB_FOLDER("bagel.db"), &db) != SQLITE_OK) {
+        std::println("Could not open db. Quiting!");
+      }
+
+      char* error_msg = 0;
+      if (sqlite3_exec(db,
+                       // clang-format off
+"CREATE TABLE IF NOT EXISTS \"leaderboard\" ( "
+	"\"tag\"	TEXT NOT NULL, "
+	"\"team\"	TEXT, "
+	"\"score\"	NUMERIC NOT NULL, "
+	"\"mode\"	TEXT, "
+	"\"email\"	TEXT"
+");",
+                       // clang-format on
+                       nullptr, nullptr, &error_msg) != SQLITE_OK) {
+        std::println(stderr, "{}", error_msg);
+        sqlite3_free(error_msg);
+      }
+    }
+    return db;
+  }
+
+ private:
   sqlite3* db = nullptr;
 };
 
@@ -121,6 +168,8 @@ class GameScene final : public Scene {
       LoadTexture(RELEASE_FOLDER("keyboardcheatsheet.png"));
   Texture joystick_cheatsheet =
       LoadTexture(RELEASE_FOLDER("joystickcheatsheet.png"));
+  Texture shovel_cheatsheet =
+      LoadTexture(RELEASE_FOLDER("shovelcheatsheet.png"));
 
   float speed_modifier = 1;  // slowmode stuff
 
@@ -184,6 +233,7 @@ class GameScene final : public Scene {
   size_t shovel_score = 0;
   Font segment_font = LoadFontEx(RELEASE_FOLDER("Lato-Black.ttf"), 80, NULL, 0);
   Font score_font = LoadFontEx(RELEASE_FOLDER("Lato-Bold.ttf"), 30, NULL, 0);
+  Font info_font = LoadFontEx(RELEASE_FOLDER("Lato-Regular.ttf"), 40, NULL, 0);
 
   // always
   JPH::BodyID player_id;

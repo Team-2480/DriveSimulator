@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstring>
 #include <format>
+#include <iterator>
 #include <print>
 #include <string>
 #include <vector>
@@ -305,6 +306,18 @@ void GameScene::step() {
                            (int)state.time_trial_selected);
       }
       state.leaderboard_name = mode;
+      if (state.leaderboard_reverse_map.contains(mode) &&
+          std::find(state.leaderboard_pretty_names.begin(),
+                    state.leaderboard_pretty_names.end(),
+                    state.leaderboard_reverse_map[mode]) !=
+              state.leaderboard_pretty_names.end()) {
+        auto distance_pretty =
+            std::distance(state.leaderboard_pretty_names.begin(),
+                          std::find(state.leaderboard_pretty_names.begin(),
+                                    state.leaderboard_pretty_names.end(),
+                                    state.leaderboard_reverse_map[mode]));
+        state.selected_leaderboard = distance_pretty;
+      }
 
       if (nk_button_label(ctx, "Submit")) {
         char* query = sqlite3_mprintf(
@@ -313,7 +326,8 @@ void GameScene::step() {
             mode.c_str(), submit_email);
 
         char* err_msg;
-        if (sqlite3_exec(state.db, query, NULL, NULL, &err_msg) != SQLITE_OK) {
+        if (sqlite3_exec(state.get_db(), query, NULL, NULL, &err_msg) !=
+            SQLITE_OK) {
           std::println("{}", err_msg);
           sqlite3_free(err_msg);
         }
@@ -330,8 +344,8 @@ void GameScene::step() {
         nk_widget_disable_end(ctx);
       }
 
-      if (nk_button_label(ctx, "Nope! Just quit.")) {
-        state.screen = ProgramState::SCREEN_MAIN_MENU;
+      if (nk_button_label(ctx, "Skip Submission")) {
+        state.screen = ProgramState::SCREEN_LEADERBOARD;
       }
       nk_spacer(ctx);
     }
@@ -540,6 +554,17 @@ void GameScene::draw() {
       default:
         break;
     }
+
+    if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+      auto min_width = (float)GetScreenWidth() / (float)shovel_cheatsheet.width;
+      auto min_height =
+          (float)GetScreenHeight() / (float)shovel_cheatsheet.height;
+      auto scale = std::min({min_width, min_height, 0.5f});
+      DrawTextureEx(shovel_cheatsheet,
+                    {GetScreenWidth() - scale * shovel_cheatsheet.width,
+                     GetScreenHeight() - scale * shovel_cheatsheet.height},
+                    0.0, scale, WHITE);
+    }
   }
 
   if (countdown_active) {
@@ -726,24 +751,30 @@ void GameScene::game_draw() {
     }
   }
 
-  auto y_cursor = std::max(GetScreenHeight() - 100, 0);
+  auto y_cursor = std::max(GetScreenHeight() - 150, 0);
+  auto y_start = y_cursor;
   auto x_cursor = 10;
 
+  DrawRectangleRounded({.x = -40,
+                        .y = static_cast<float>(y_start - 10),
+                        .width = 650,
+                        .height = 300},
+                       0.1, 5, {0, 0, 0, 76});
   DrawRectangle(
-      x_cursor, y_cursor, 30, 30,
+      x_cursor, y_cursor, 60, 60,
       global_local ? Color{163, 212, 226, 255} : Color{177, 163, 226, 255});
   DrawTextEx(
       score_font, "Local (blue) or Global (purple) relative movement ",
-      {static_cast<float>(x_cursor + 35), static_cast<float>(y_cursor + 5)}, 20,
-      0, WHITE);
-  y_cursor += 40;
+      {static_cast<float>(x_cursor + 65), static_cast<float>(y_cursor + 15)},
+      30, 0, WHITE);
+  y_cursor += 70;
 
-  DrawRectangle(x_cursor, y_cursor, 30, 30,
+  DrawRectangle(x_cursor, y_cursor, 60, 60,
                 stuck ? Color{226, 178, 163, 255} : Color{163, 226, 178, 255});
   DrawTextEx(
-      score_font, "Stuck indicatior",
-      {static_cast<float>(x_cursor + 35), static_cast<float>(y_cursor + 5)}, 20,
-      0, WHITE);
+      score_font, "Stuck indicator",
+      {static_cast<float>(x_cursor + 65), static_cast<float>(y_cursor + 15)},
+      30, 0, WHITE);
 
   controller_info.draw(state.input);
 }
