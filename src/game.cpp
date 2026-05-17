@@ -24,6 +24,7 @@
 #include "Jolt/Physics/EActivation.h"
 #include "config.h"
 #include "control.h"
+#include "nkutils.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "scene.h"
@@ -107,6 +108,7 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
 
   int font_size = 20;
   font = LoadFontEx(RELEASE_FOLDER("Lato-Regular.ttf"), 20, NULL, 0);
+  nk_score_font = nk_make_font(score_font, 30);
   ctx = InitNuklearEx(font, font_size);
 
   if (state.gamemode == ProgramState::GAMEMODE_SANDBOX) {
@@ -116,7 +118,6 @@ GameScene::GameScene(ProgramState& program_state, Shader& shader)
   }
 
   if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-    // printf("time trial selected: %d\n", state.time_trial_selected);
     camera_index = tt_camera_angle[state.time_trial_selected];
     if (camera_index >= 1 && camera_index <= 3) {
       default_rot = PI / 2;
@@ -211,145 +212,170 @@ void GameScene::step() {
   if (state.screen == ProgramState::SCREEN_SCORE_SUBMIT) {
     UpdateNuklear(ctx);
 
-    float center_x = GetScreenWidth() / 2.0f;
-    float width_x = std::min(700, GetScreenWidth());
-    float center_y = GetScreenHeight() / 2.0f;
-    float width_y = std::min(500, GetScreenHeight());
+    std::string score_text = "Format does not exist for this gamemode";
+    if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+      score_text = std::format("You scored an {} on Shovel.", shovel_score);
+    } else if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
+      score_text = std::format("You completed the trial in {:.2f} seconds",
+                               time_trials_stopwatch);
+    }
 
-    ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 0});
-    ctx->style.button.rounding = 20;
-
-    ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 50});
-    ctx->style.window.rounding = 20;
-    ctx->style.window.border = 2;
-    ctx->style.window.padding = {20, 20};
-    ctx->style.window.border_color = {255, 255, 255, 255};
     ctx->style.text.color = {255, 255, 255, 255};
     ctx->style.edit.cursor_size = 2.0;
     ctx->style.edit.cursor_hover = (std::fmod(GetTime(), 1.0) < 0.5)
                                        ? nk_color{100, 100, 100, 255}
                                        : nk_color{0, 0, 0, 0};
 
-    if (nk_begin(ctx, "Score Submit",
-                 nk_rect(center_x - width_x / 2, center_y - width_y / 2,
-                         width_x, width_y),
-                 NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
-      nk_layout_row_dynamic(ctx, 50, 1);
-      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
-        nk_label(
-            ctx,
-            std::format("You scored an {} on Shovel.", shovel_score).c_str(),
-            NK_TEXT_CENTERED);
-      } else if (state.gamemode == ProgramState::GAMEMODE_ARCADE_TIME) {
-        nk_label(ctx,
-                 std::format("You completed the trial in {:.2f} seconds",
-                             time_trials_stopwatch)
-                     .c_str(),
-                 NK_TEXT_CENTERED);
-      }
-
-      nk_layout_row_dynamic(ctx, 25, 1);
-      nk_spacer(ctx);
-
-      nk_label(ctx, "Leaderboard Info", NK_TEXT_CENTERED);
-      nk_layout_row_dynamic(ctx, 50, 2);
-
-      nk_label(ctx, "User Tag", NK_TEXT_CENTERED);
-      nk_label(ctx, "Team Number", NK_TEXT_CENTERED);
-      nk_flags name_tag_event = nk_edit_string_zero_terminated_caps(
-          ctx,
-          NK_EDIT_ALWAYS_INSERT_MODE | NK_EDIT_SELECTABLE | NK_EDIT_CLIPBOARD |
-              NK_EDIT_AUTO_SELECT,
-          submit_nametag, sizeof(submit_nametag), nk_filter_ascii);
-
-      if (name_tag_event == NK_EDIT_ACTIVE) {
-        submit_nametag_changed = true;
-      }
-
-      nk_flags number_event = nk_edit_string_zero_terminated(
-          ctx, NK_EDIT_FIELD, submit_number, sizeof(submit_number),
-          nk_filter_decimal);
-      if (number_event == NK_EDIT_ACTIVE) {
-        submit_number_changed = true;
-      }
-
-      nk_layout_row_dynamic(ctx, 50, 1);
-      nk_label(ctx, "Optional! Not for display purposes", NK_TEXT_CENTERED);
-      nk_flags email_event =
-          nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, submit_email,
-                                         sizeof(submit_email), nk_filter_ascii);
-
-      if (email_event == NK_EDIT_ACTIVE) {
-        submit_email_changed = true;
-      }
-
-      nk_layout_row_dynamic(ctx, 50, 4);
-      nk_spacer(ctx);
-
-      bool can_submit =
-          strlen(submit_nametag) == 0 || strlen(submit_number) == 0;
-      if (can_submit) {
-        nk_widget_disable_begin(ctx);
-      }
-
-      std::string score = "---";
-      std::string mode = "---";
-
-      // NOTICE: bump these version numbers if you update the game
-      if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
-        score = std::format("{}", shovel_score);
-        mode = "shovel-v1";
-      } else if (state.gamemode ==
-                 ProgramState::GAMEMODE_ARCADE_TIME) {  // Time Trial Completion
-        score = std::format("{:.2f}", time_trials_stopwatch);
-        mode = std::format("time-trial-v1-trial-{}",
-                           (int)state.time_trial_selected);
-      }
-      state.leaderboard_name = mode;
-      if (state.leaderboard_reverse_map.contains(mode) &&
-          std::find(state.leaderboard_pretty_names.begin(),
-                    state.leaderboard_pretty_names.end(),
-                    state.leaderboard_reverse_map[mode]) !=
-              state.leaderboard_pretty_names.end()) {
-        auto distance_pretty =
-            std::distance(state.leaderboard_pretty_names.begin(),
-                          std::find(state.leaderboard_pretty_names.begin(),
-                                    state.leaderboard_pretty_names.end(),
-                                    state.leaderboard_reverse_map[mode]));
-        state.selected_leaderboard = distance_pretty;
-      }
-
-      if (nk_button_label(ctx, "Submit")) {
-        char* query = sqlite3_mprintf(
-            "REPLACE INTO leaderboard VALUES ('%q', '%q', '%q', '%q', '%q');",
-            submit_nametag, submit_number, std::format("{}", score).c_str(),
-            mode.c_str(), submit_email);
-
-        char* err_msg;
-        if (sqlite3_exec(state.get_db(), query, NULL, NULL, &err_msg) !=
-            SQLITE_OK) {
-          std::println("{}", err_msg);
-          sqlite3_free(err_msg);
+    if (state.input == INPUT_TOUCH) {
+      ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 50});
+      ctx->style.window.rounding = 20;
+      ctx->style.window.border = 2;
+      ctx->style.window.padding = {20, 20};
+      ctx->style.window.border_color = {255, 255, 255, 255};
+      float center_x = GetScreenWidth() / 2.0f;
+      float width_x = std::min(700, GetScreenWidth());
+      float center_y = GetScreenHeight() / 2.0f;
+      float width_y = std::min(150, GetScreenHeight());
+      if (nk_begin(ctx, "Score Submit",
+                   nk_rect(center_x - width_x / 2, center_y - width_y / 2,
+                           width_x, width_y),
+                   NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+        nk_layout_row_dynamic(ctx, 50, 1);
+        nk_style_push_font(ctx, nk_score_font);
+        nk_label(ctx, score_text.c_str(), NK_TEXT_CENTERED);
+        nk_style_pop_font(ctx);
+        nk_layout_row_dynamic(ctx, 50, 3);
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "Home")) {
+          state.screen = ProgramState::SCREEN_MAIN_MENU;
         }
-        sqlite3_free(query);
+        nk_spacer(ctx);
+        nk_end(ctx);
+      } else {
+        float center_x = GetScreenWidth() / 2.0f;
+        float width_x = std::min(700, GetScreenWidth());
+        float center_y = GetScreenHeight() / 2.0f;
+        float width_y = std::min(500, GetScreenHeight());
+        ctx->style.window.fixed_background = nk_style_item_color({0, 0, 0, 50});
+        ctx->style.window.rounding = 20;
+        ctx->style.window.border = 2;
+        ctx->style.window.padding = {20, 20};
+        ctx->style.window.border_color = {255, 255, 255, 255};
 
-        // clang-format off
+        if (nk_begin(ctx, "Score Submit",
+                     nk_rect(center_x - width_x / 2, center_y - width_y / 2,
+                             width_x, width_y),
+                     NK_WINDOW_BACKGROUND | NK_WINDOW_BORDER)) {
+          nk_layout_row_dynamic(ctx, 50, 1);
+
+          nk_label(ctx, score_text.c_str(), NK_TEXT_CENTERED);
+
+          nk_layout_row_dynamic(ctx, 25, 1);
+          nk_spacer(ctx);
+
+          nk_label(ctx, "Leaderboard Info", NK_TEXT_CENTERED);
+          nk_layout_row_dynamic(ctx, 50, 2);
+
+          nk_label(ctx, "User Tag", NK_TEXT_CENTERED);
+          nk_label(ctx, "Team Number", NK_TEXT_CENTERED);
+          nk_flags name_tag_event = nk_edit_string_zero_terminated_caps(
+              ctx,
+              NK_EDIT_ALWAYS_INSERT_MODE | NK_EDIT_SELECTABLE |
+                  NK_EDIT_CLIPBOARD | NK_EDIT_AUTO_SELECT,
+              submit_nametag, sizeof(submit_nametag), nk_filter_ascii);
+
+          if (name_tag_event == NK_EDIT_ACTIVE) {
+            submit_nametag_changed = true;
+          }
+
+          nk_flags number_event = nk_edit_string_zero_terminated(
+              ctx, NK_EDIT_FIELD, submit_number, sizeof(submit_number),
+              nk_filter_decimal);
+          if (number_event == NK_EDIT_ACTIVE) {
+            submit_number_changed = true;
+          }
+
+          nk_layout_row_dynamic(ctx, 50, 1);
+          nk_label(ctx, "Optional! Not for display purposes", NK_TEXT_CENTERED);
+          nk_flags email_event = nk_edit_string_zero_terminated(
+              ctx, NK_EDIT_FIELD, submit_email, sizeof(submit_email),
+              nk_filter_ascii);
+
+          if (email_event == NK_EDIT_ACTIVE) {
+            submit_email_changed = true;
+          }
+
+          nk_layout_row_dynamic(ctx, 50, 4);
+          nk_spacer(ctx);
+
+          bool can_submit =
+              strlen(submit_nametag) == 0 || strlen(submit_number) == 0;
+          if (can_submit) {
+            nk_widget_disable_begin(ctx);
+          }
+
+          std::string score = "---";
+          std::string mode = "---";
+
+          // NOTICE: bump these version numbers if you update the game
+          if (state.gamemode == ProgramState::GAMEMODE_ARCADE_SHOVEL) {
+            score = std::format("{}", shovel_score);
+            mode = "shovel-v1";
+          } else if (state.gamemode ==
+                     ProgramState::GAMEMODE_ARCADE_TIME) {  // Time Trial
+                                                            // Completion
+            score = std::format("{:.2f}", time_trials_stopwatch);
+            mode = std::format("time-trial-v1-trial-{}",
+                               (int)state.time_trial_selected);
+          }
+          state.leaderboard_name = mode;
+          if (state.leaderboard_reverse_map.contains(mode) &&
+              std::find(state.leaderboard_pretty_names.begin(),
+                        state.leaderboard_pretty_names.end(),
+                        state.leaderboard_reverse_map[mode]) !=
+                  state.leaderboard_pretty_names.end()) {
+            auto distance_pretty =
+                std::distance(state.leaderboard_pretty_names.begin(),
+                              std::find(state.leaderboard_pretty_names.begin(),
+                                        state.leaderboard_pretty_names.end(),
+                                        state.leaderboard_reverse_map[mode]));
+            state.selected_leaderboard = distance_pretty;
+          }
+
+          if (nk_button_label(ctx, "Submit")) {
+            char* query = sqlite3_mprintf(
+                "REPLACE INTO leaderboard VALUES ('%q', '%q', '%q', '%q', "
+                "'%q');",
+                submit_nametag, submit_number, std::format("{}", score).c_str(),
+                mode.c_str(), submit_email);
+
+            char* err_msg;
+            if (sqlite3_exec(state.get_db(), query, NULL, NULL, &err_msg) !=
+                SQLITE_OK) {
+              std::println("{}", err_msg);
+              sqlite3_free(err_msg);
+            }
+            sqlite3_free(query);
+
+            // clang-format off
         EM_ASM(FS.syncfs(false, (err) => { console.log(err); }););
-        // clang-format on
+            // clang-format on
 
-        state.screen = ProgramState::SCREEN_LEADERBOARD;
-      }
+            state.screen = ProgramState::SCREEN_LEADERBOARD;
+          }
 
-      if (can_submit) {
-        nk_widget_disable_end(ctx);
-      }
+          if (can_submit) {
+            nk_widget_disable_end(ctx);
+          }
 
-      if (nk_button_label(ctx, "Skip Submission")) {
-        state.screen = ProgramState::SCREEN_LEADERBOARD;
+          if (nk_button_label(ctx, "Skip Submission")) {
+            state.screen = ProgramState::SCREEN_LEADERBOARD;
+          }
+          nk_spacer(ctx);
+        }
+        nk_end(ctx);
       }
-      nk_spacer(ctx);
     }
-    nk_end(ctx);
   }
 }
 
@@ -751,30 +777,33 @@ void GameScene::game_draw() {
     }
   }
 
-  auto y_cursor = std::max(GetScreenHeight() - 150, 0);
-  auto y_start = y_cursor;
-  auto x_cursor = 10;
+  if (state.input != INPUT_TOUCH) {
+    auto y_cursor = std::max(GetScreenHeight() - 150, 0);
+    auto y_start = y_cursor;
+    auto x_cursor = 10;
 
-  DrawRectangleRounded({.x = -40,
-                        .y = static_cast<float>(y_start - 10),
-                        .width = 650,
-                        .height = 300},
-                       0.1, 5, {0, 0, 0, 76});
-  DrawRectangle(
-      x_cursor, y_cursor, 60, 60,
-      global_local ? Color{163, 212, 226, 255} : Color{177, 163, 226, 255});
-  DrawTextEx(
-      score_font, "Local (blue) or Global (purple) relative movement ",
-      {static_cast<float>(x_cursor + 65), static_cast<float>(y_cursor + 15)},
-      30, 0, WHITE);
-  y_cursor += 70;
+    DrawRectangleRounded({.x = -40,
+                          .y = static_cast<float>(y_start - 10),
+                          .width = 650,
+                          .height = 300},
+                         0.1, 5, {0, 0, 0, 76});
+    DrawRectangle(
+        x_cursor, y_cursor, 60, 60,
+        global_local ? Color{163, 212, 226, 255} : Color{177, 163, 226, 255});
+    DrawTextEx(
+        score_font, "Local (blue) or Global (purple) relative movement ",
+        {static_cast<float>(x_cursor + 65), static_cast<float>(y_cursor + 15)},
+        30, 0, WHITE);
+    y_cursor += 70;
 
-  DrawRectangle(x_cursor, y_cursor, 60, 60,
-                stuck ? Color{226, 178, 163, 255} : Color{163, 226, 178, 255});
-  DrawTextEx(
-      score_font, "Stuck indicator",
-      {static_cast<float>(x_cursor + 65), static_cast<float>(y_cursor + 15)},
-      30, 0, WHITE);
+    DrawRectangle(
+        x_cursor, y_cursor, 60, 60,
+        stuck ? Color{226, 178, 163, 255} : Color{163, 226, 178, 255});
+    DrawTextEx(
+        score_font, "Stuck indicator",
+        {static_cast<float>(x_cursor + 65), static_cast<float>(y_cursor + 15)},
+        30, 0, WHITE);
+  }
 
   controller_info.draw(state.input);
 }

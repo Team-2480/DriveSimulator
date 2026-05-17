@@ -229,11 +229,13 @@ class MenuScene final : public Scene {
           }
           nk_spacer(ctx);
 
+#ifdef PLATFORM_DESKTOP
           nk_spacer(ctx);
           if (nk_button_label(ctx, "Quit")) {
             state.screen = ProgramState::SCREEN_QUIT;
           }
           nk_spacer(ctx);
+#endif
 
           nk_layout_row_dynamic(ctx, 25, 1);
           nk_spacer(ctx);
@@ -530,7 +532,8 @@ class MenuScene final : public Scene {
             }
 
             query = std::format(
-                "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY score "
+                "SELECT * FROM leaderboard WHERE mode = \'{}\' ORDER BY "
+                "score "
                 "{} LIMIT 10",
                 state.leaderboard_name, leaderboard_ordering);
             nk_spacer(ctx);

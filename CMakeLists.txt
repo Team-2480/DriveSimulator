@@ -25,6 +25,8 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
+
 execute_process(
         COMMAND git log -1 --format=%h
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}

@@ -6,6 +6,7 @@ add_executable(bagelsim
  nuklear.cpp
  rlights.cpp
  game.cpp
+ nkutils.cpp
 )
 
 if (EMSCRIPTEN)
@@ -22,7 +23,7 @@ if (EMSCRIPTEN)
         COMMENT "Add files to Github pages")
 endif()
 
-target_compile_options(bagelsim PRIVATE -Wall -Wextra -Wpedantic -Wuninitialized)
+target_compile_options(bagelsim PRIVATE -Wall -Wextra -Wpedantic -Wuninitialized -Wno-missing-field-initializers)
 target_link_options(bagelsim PRIVATE -Wall -Wextra -Wpedantic -Wuninitialized)
 
 set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -g -pthread ")

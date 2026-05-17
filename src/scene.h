@@ -1,16 +1,5 @@
 #pragma once
 
-#include <filesystem>
-#include <optional>
-#include <print>
-#include <string>
-#include <unordered_map>
-
-#include "sqlite3.h"
-#if defined(PLATFORM_WEB)
-#include <emscripten/emscripten.h>
-#endif
-
 #include <Jolt/Jolt.h>
 // jolt must be first
 
@@ -31,16 +20,27 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
+#include <optional>
+#include <print>
+#include <string>
+#include <unordered_map>
 
 #include "config.h"
 #include "control.h"
 #include "jolt.h"
+#include "nkutils.h"
 #include "raylib-nuklear.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
 #include "rlights.h"
+#include "sqlite3.h"
 #include "swerve.h"
+
+#if defined(PLATFORM_WEB)
+#include <emscripten/emscripten.h>
+#endif
 
 using namespace JPH::literals;
 
@@ -236,6 +236,7 @@ class GameScene final : public Scene {
   Font segment_font = LoadFontEx(RELEASE_FOLDER("Lato-Black.ttf"), 80, NULL, 0);
   Font score_font = LoadFontEx(RELEASE_FOLDER("Lato-Bold.ttf"), 30, NULL, 0);
   Font info_font = LoadFontEx(RELEASE_FOLDER("Lato-Regular.ttf"), 40, NULL, 0);
+  struct nk_user_font* nk_score_font;
 
   // always
   JPH::BodyID player_id;
@@ -274,6 +275,7 @@ class GameScene final : public Scene {
     UnloadFont(font);
     UnloadFont(segment_font);
     UnloadFont(score_font);
+    nk_free_font(nk_score_font);
 
     UnloadNuklear(ctx);
   }

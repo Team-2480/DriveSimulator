@@ -19,6 +19,12 @@ constexpr float BALL_RADIUS = 0.075;
 #ifdef PLATFORM_WEB
 #define RELEASE_FOLDER(value) "release/" value
 #define DB_FOLDER(value) "/db/" value
+
+// this never gets build just shuts clangd up
+#ifndef EM_ASM
+#define EM_ASM(value)
+#endif
+
 #else
 #define RELEASE_FOLDER(value) "../release/" value
 #define DB_FOLDER(value) "./" value

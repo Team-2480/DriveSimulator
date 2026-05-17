@@ -147,6 +147,14 @@
           console.log(err);
         });
       };
+
+      document.getElementById("canvas").addEventListener("touchstart", () => {
+        if(!window.matchMedia("(pointer: coarse)").matches){
+          return;
+        }
+        document.getElementById("canvas").requestFullscreen();
+      });
+
     </script>
     {{{ SCRIPT }}}
 #if MODULARIZE && !EXPORT_ES6
