@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 23)
 project(DriveSimulator)
 
 option(EMSCRIPTEN "Build for the web" OFF)
+option(KIOSK "Build for a standalone setup as a display" OFF)
 
 if (EMSCRIPTEN)
   file(REAL_PATH release RELEASE_PATH)
@@ -17,6 +18,10 @@ if (EMSCRIPTEN)
   add_compile_definitions(PLATFORM_WEB)
   set(PLATFORM Web)
 endif ()
+
+if(NOT KIOSK)
+  add_compile_definitions(NOT_KIOSK)
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
